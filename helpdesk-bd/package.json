@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js"   
+    "dev": "nodemon src/server.js"
   },
   "keywords": [],
   "author": "",
@@ -23,6 +23,7 @@
     "nodemailer": "^9.0.4",
     "pg": "^8.22.0",
     "pg-hstore": "^2.3.4",
+    "resend": "^6.18.1",
     "sequelize": "^6.37.8",
     "uuid": "^14.0.1"
   },

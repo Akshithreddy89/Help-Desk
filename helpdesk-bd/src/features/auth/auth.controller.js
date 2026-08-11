@@ -1,7 +1,7 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { User } = require("../../models");
-
+const PasswordResetToken = require("../../models/passwordResetToken.model");
 // ==============================
 // Customer Registration
 // ==============================
@@ -35,7 +35,7 @@ const register = async (req, res) => {
       return res.status(400).json({
         success: false,
         message:
-          "Password must be more than 6 characters long and include at least one letter, one number, and one special character (e.g. Test@123).",
+          "Password must be more than 6 characters include at least one letter, one number, and one special character (e.g. Test@123).",
       });
     }
 
@@ -217,7 +217,103 @@ const login = async (req, res) => {
   }
 };
 
+const setPassword = async (req, res) => {
+  try {
+    const { token, password, confirm_password } = req.body;
+
+    if (!token || !password || !confirm_password) {
+      return res.status(400).json({
+        success: false,
+
+        message: "All fields are required.",
+      });
+    }
+
+    if (password !== confirm_password) {
+      return res.status(400).json({
+        success: false,
+
+        message: "Password and Confirm Password do not match.",
+      });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({
+        success: false,
+
+        message: "Password must be at least 8 characters.",
+      });
+    }
+
+    const invitationToken = await PasswordResetToken.findOne({
+      where: {
+        token,
+      },
+    });
+
+    if (!invitationToken) {
+      return res.status(400).json({
+        success: false,
+
+        message: "Invalid invitation token.",
+      });
+    }
+
+    const currentTime = new Date();
+
+    if (currentTime > invitationToken.expires_at) {
+      return res.status(400).json({
+        success: false,
+
+        message: "Invitation link has expired.",
+      });
+    }
+    const agent = await User.findByPk(invitationToken.user_id);
+
+    if (!agent) {
+      return res.status(404).json({
+        success: false,
+
+        message: "Agent not found.",
+      });
+    }
+
+    if (agent.account_status === "ACTIVE") {
+      return res.status(400).json({
+        success: false,
+
+        message: "Password has already been set.",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    agent.password = hashedPassword;
+
+    agent.account_status = "ACTIVE";
+
+    await agent.save();
+
+    await invitationToken.destroy();
+
+    return res.status(200).json({
+      success: true,
+
+      message: "Password created successfully. You can now login.",
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+
+      message: "Internal Server Error.",
+    });
+  }
+};
+
 module.exports = {
   register,
   login,
+  setPassword,
 };
