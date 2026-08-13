@@ -8,7 +8,7 @@ interface CustomerLayoutProps {
 
 const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
+    <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden', backgroundColor: '#f9f9f9' }}>
       <Sidebar />
       <Box component="main" sx={{ flexGrow: 1, p: 4, overflowY: 'auto' }}>
         {children}

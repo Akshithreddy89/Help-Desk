@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Typography, TextField, Button, Box, Link as MuiLink, Alert, Grid } from '@mui/material';
+import { Typography, TextField, Button, Box, Link as MuiLink, Alert, Grid, InputAdornment, IconButton } from '@mui/material';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
+import { MuiTelInput } from 'mui-tel-input';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
@@ -27,6 +29,18 @@ const validationSchema = yup.object({
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const handleClickShowPassword = () => setShowPassword((show) => !show);
+  const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+  };
+
+  const handleClickShowConfirmPassword = () => setShowConfirmPassword((show) => !show);
+  const handleMouseDownConfirmPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+  };
 
   const formik = useFormik({
     initialValues: {
@@ -124,17 +138,17 @@ const RegisterPage: React.FC = () => {
           <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
             Phone number
           </Typography>
-          <TextField
+          <MuiTelInput
             fullWidth
             id="phone_number"
             name="phone_number"
-            placeholder="+1234567890"
             value={formik.values.phone_number}
-            onChange={formik.handleChange}
-            onBlur={formik.handleBlur}
+            onChange={(value) => formik.setFieldValue('phone_number', value)}
+            onBlur={() => formik.setFieldTouched('phone_number', true)}
             error={formik.touched.phone_number && Boolean(formik.errors.phone_number)}
             helperText={formik.touched.phone_number && formik.errors.phone_number}
             size="small"
+            defaultCountry="US"
           />
         </Box>
 
@@ -164,7 +178,7 @@ const RegisterPage: React.FC = () => {
             fullWidth
             id="password"
             name="password"
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             placeholder="••••••••"
             value={formik.values.password}
             onChange={formik.handleChange}
@@ -172,6 +186,24 @@ const RegisterPage: React.FC = () => {
             error={formik.touched.password && Boolean(formik.errors.password)}
             helperText={formik.touched.password && formik.errors.password}
             size="small"
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle password visibility"
+                      onClick={handleClickShowPassword}
+                      onMouseDown={handleMouseDownPassword}
+                      edge="end"
+                      disableRipple
+                      sx={{ backgroundColor: 'transparent', '&:hover': { backgroundColor: 'transparent' } }}
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              },
+            }}
           />
         </Box>
 
@@ -183,7 +215,7 @@ const RegisterPage: React.FC = () => {
             fullWidth
             id="confirm_password"
             name="confirm_password"
-            type="password"
+            type={showConfirmPassword ? 'text' : 'password'}
             placeholder="••••••••"
             value={formik.values.confirm_password}
             onChange={formik.handleChange}
@@ -191,6 +223,24 @@ const RegisterPage: React.FC = () => {
             error={formik.touched.confirm_password && Boolean(formik.errors.confirm_password)}
             helperText={formik.touched.confirm_password && formik.errors.confirm_password}
             size="small"
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle confirm password visibility"
+                      onClick={handleClickShowConfirmPassword}
+                      onMouseDown={handleMouseDownConfirmPassword}
+                      edge="end"
+                      disableRipple
+                      sx={{ backgroundColor: 'transparent', '&:hover': { backgroundColor: 'transparent' } }}
+                    >
+                      {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              },
+            }}
           />
         </Box>
 

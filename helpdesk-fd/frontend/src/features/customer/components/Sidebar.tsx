@@ -3,7 +3,6 @@ import { Box, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typogr
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   DashboardOutlined as DashboardOutlinedIcon,
-  AddCircleOutlined as AddCircleOutlineIcon,
   FormatListBulleted as FormatListBulletedIcon,
   PersonOutlined as PersonOutlineIcon,
   LogoutOutlined as LogoutOutlinedIcon,
@@ -21,7 +20,6 @@ const Sidebar: React.FC = () => {
 
   const menuItems = [
     { title: 'Dashboard', icon: <DashboardOutlinedIcon />, path: '/customer/dashboard' },
-    { title: 'Raise Ticket', icon: <AddCircleOutlineIcon />, path: '/customer/raise-ticket' },
     { title: 'My Tickets', icon: <FormatListBulletedIcon />, path: '/customer/tickets' },
     { title: 'Profile', icon: <PersonOutlineIcon />, path: '/customer/profile' },
   ];

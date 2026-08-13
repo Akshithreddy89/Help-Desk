@@ -15,6 +15,30 @@ router.post(
   adminController.createAgent,
 );
 
+// Get All Agents
+router.get(
+  "/agents",
+  authMiddleware,
+  authorizeRoles("ADMIN"),
+  adminController.getAllAgents,
+);
+
 // router.post("/test-email", adminController.testEmail);
+
+// Get All Tickets (Admin only)
+router.get(
+  "/tickets",
+  authMiddleware,
+  authorizeRoles("ADMIN"),
+  adminController.getAllTickets,
+);
+
+// Assign a Ticket to an Agent (Admin only)
+router.patch(
+  "/tickets/:id/assign",
+  authMiddleware,
+  authorizeRoles("ADMIN"),
+  adminController.assignTicket,
+);
 
 module.exports = router;

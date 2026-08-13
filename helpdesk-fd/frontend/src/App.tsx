@@ -5,8 +5,13 @@ import SetPasswordPage from './features/auth/pages/SetPasswordPage';
 import CustomerDashboard from './features/customer/pages/CustomerDashboard';
 import AdminDashboard from './features/admin/pages/AdminDashboard';
 import AdminAgents from './features/admin/pages/AdminAgents';
+import AdminTickets from './features/admin/pages/AdminTickets';
 import AgentDashboard from './features/agent/pages/AgentDashboard';
+import AgentTickets from './features/agent/pages/AgentTickets';
+import AgentTicketDetails from "./features/agent/pages/AgentTicketDetails";
 import CustomerProfile from './features/customer/pages/CustomerProfile';
+import MyTickets from './features/customer/pages/MyTickets';
+import TicketDetails from './features/customer/pages/TicketDetails';
 
 const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode, allowedRoles: string[] }) => {
   const token = localStorage.getItem('token');
@@ -46,6 +51,22 @@ function App() {
           } 
         />
         <Route 
+          path="/customer/tickets" 
+          element={
+            <ProtectedRoute allowedRoles={['customer']}>
+              <MyTickets />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/customer/tickets/:id" 
+          element={
+            <ProtectedRoute allowedRoles={['customer']}>
+              <TicketDetails />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
           path="/customer/profile" 
           element={
             <ProtectedRoute allowedRoles={['customer']}>
@@ -70,7 +91,38 @@ function App() {
             </ProtectedRoute>
           } 
         />
-        <Route path="/agent/dashboard" element={<AgentDashboard />} />
+        <Route 
+          path="/admin/tickets" 
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminTickets />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/agent/dashboard" 
+          element={
+            <ProtectedRoute allowedRoles={['agent']}>
+              <AgentDashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/agent/my-tickets" 
+          element={
+            <ProtectedRoute allowedRoles={['agent']}>
+              <AgentTickets />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/agent/tickets/:id" 
+          element={
+            <ProtectedRoute allowedRoles={['agent']}>
+              <AgentTicketDetails />
+            </ProtectedRoute>
+          } 
+        />
         {/* Default route */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>

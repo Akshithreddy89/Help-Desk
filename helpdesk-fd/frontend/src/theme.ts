@@ -48,6 +48,7 @@ const theme = createTheme({
     MuiOutlinedInput: {
       styleOverrides: {
         root: {
+          backgroundColor: '#ffffff',
           '& fieldset': {
             borderColor: '#e0e0e0',
           },
@@ -56,6 +57,14 @@ const theme = createTheme({
           },
           '&.Mui-focused fieldset': {
             borderColor: '#111315',
+          },
+          '&:has(input:-webkit-autofill)': {
+            backgroundColor: '#ffffff !important',
+          },
+        },
+        input: {
+          '&:-webkit-autofill': {
+            WebkitBoxShadow: '0 0 0 100px #ffffff inset !important',
           },
         },
       },

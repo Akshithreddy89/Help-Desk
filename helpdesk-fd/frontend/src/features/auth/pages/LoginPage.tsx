@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Typography, TextField, Button, Box, Link as MuiLink, Alert } from '@mui/material';
+import { Typography, TextField, Button, Box, Link as MuiLink, Alert, InputAdornment, IconButton } from '@mui/material';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
@@ -14,6 +15,12 @@ const validationSchema = yup.object({
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handleClickShowPassword = () => setShowPassword((show) => !show);
+  const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+  };
 
   const formik = useFormik({
     initialValues: {
@@ -84,7 +91,7 @@ const LoginPage: React.FC = () => {
             fullWidth
             id="password"
             name="password"
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             placeholder="••••••••"
             value={formik.values.password}
             onChange={formik.handleChange}
@@ -92,12 +99,25 @@ const LoginPage: React.FC = () => {
             error={formik.touched.password && Boolean(formik.errors.password)}
             helperText={formik.touched.password && formik.errors.password}
             size="small"
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle password visibility"
+                      onClick={handleClickShowPassword}
+                      onMouseDown={handleMouseDownPassword}
+                      edge="end"
+                      disableRipple
+                      sx={{ backgroundColor: 'transparent', '&:hover': { backgroundColor: 'transparent' } }}
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              },
+            }}
           />
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
-            <MuiLink component={RouterLink} to="/forgot-password" variant="body2" color="text.secondary" sx={{ textDecoration: 'none' }}>
-              Forgot password?
-            </MuiLink>
-          </Box>
         </Box>
 
         <Button

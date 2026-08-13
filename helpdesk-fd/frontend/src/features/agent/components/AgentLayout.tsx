@@ -1,15 +1,15 @@
 import React from 'react';
 import { Box } from '@mui/material';
-import AdminSidebar from './AdminSidebar';
+import AgentSidebar from './AgentSidebar';
 
-interface AdminLayoutProps {
+interface AgentLayoutProps {
   children: React.ReactNode;
 }
 
-const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
+const AgentLayout: React.FC<AgentLayoutProps> = ({ children }) => {
   return (
     <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
-      <AdminSidebar />
+      <AgentSidebar />
       <Box sx={{ flexGrow: 1, height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', bgcolor: '#f4f5f7' }}>
         {children}
       </Box>
@@ -17,4 +17,4 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   );
 };
 
-export default AdminLayout;
+export default AgentLayout;

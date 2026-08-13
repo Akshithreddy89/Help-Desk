@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Typography, TextField, Button, Box, Alert, Link as MuiLink } from '@mui/material';
+import { Typography, TextField, Button, Box, Alert, Link as MuiLink, InputAdornment, IconButton } from '@mui/material';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { Link as RouterLink, useSearchParams } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
@@ -23,6 +24,18 @@ const SetPasswordPage: React.FC = () => {
   
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean>(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const handleClickShowPassword = () => setShowPassword((show) => !show);
+  const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+  };
+
+  const handleClickShowConfirmPassword = () => setShowConfirmPassword((show) => !show);
+  const handleMouseDownConfirmPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+  };
 
   const formik = useFormik({
     initialValues: {
@@ -113,7 +126,7 @@ const SetPasswordPage: React.FC = () => {
             fullWidth
             id="password"
             name="password"
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             placeholder="••••••••"
             value={formik.values.password}
             onChange={formik.handleChange}
@@ -122,6 +135,24 @@ const SetPasswordPage: React.FC = () => {
             helperText={formik.touched.password && formik.errors.password}
             size="small"
             disabled={!token}
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle password visibility"
+                      onClick={handleClickShowPassword}
+                      onMouseDown={handleMouseDownPassword}
+                      edge="end"
+                      disableRipple
+                      sx={{ backgroundColor: 'transparent', '&:hover': { backgroundColor: 'transparent' } }}
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              },
+            }}
           />
         </Box>
 
@@ -133,7 +164,7 @@ const SetPasswordPage: React.FC = () => {
             fullWidth
             id="confirm_password"
             name="confirm_password"
-            type="password"
+            type={showConfirmPassword ? 'text' : 'password'}
             placeholder="••••••••"
             value={formik.values.confirm_password}
             onChange={formik.handleChange}
@@ -142,6 +173,24 @@ const SetPasswordPage: React.FC = () => {
             helperText={formik.touched.confirm_password && formik.errors.confirm_password}
             size="small"
             disabled={!token}
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle confirm password visibility"
+                      onClick={handleClickShowConfirmPassword}
+                      onMouseDown={handleMouseDownConfirmPassword}
+                      edge="end"
+                      disableRipple
+                      sx={{ backgroundColor: 'transparent', '&:hover': { backgroundColor: 'transparent' } }}
+                    >
+                      {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              },
+            }}
           />
         </Box>
 
