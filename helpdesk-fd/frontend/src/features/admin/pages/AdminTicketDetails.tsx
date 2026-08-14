@@ -1,14 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { 
-  Box, Typography, Button, CircularProgress, Alert, Paper, 
-  Divider, TextField, Avatar, Select, MenuItem, FormControl, Chip
-} from '@mui/material';
+import { Box, Typography, Button, CircularProgress, Alert, Paper, Chip, Divider, TextField, Avatar } from '@mui/material';
 import { ArrowBackIosNew as ArrowBackIcon, Send as SendIcon } from '@mui/icons-material';
-import AgentLayout from '../components/AgentLayout';
+import AdminLayout from '../components/AdminLayout';
 import axiosInstance from '../../../utils/axios';
 import { useParams, useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { useToast } from '../../../context/ToastContext';
 
 interface TicketComment {
   id: string;
@@ -31,13 +27,11 @@ interface TicketDetail {
   status: string;
   created_at: string;
   customer?: {
-    id: string;
     first_name: string;
     last_name: string;
     email: string;
   };
   assignedAgent?: {
-    id: string;
     first_name: string;
     last_name: string;
     email: string;
@@ -45,23 +39,21 @@ interface TicketDetail {
   comments?: TicketComment[];
 }
 
-const AgentTicketDetails: React.FC = () => {
+const AdminTicketDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { showToast } = useToast();
   
   const [ticket, setTicket] = useState<TicketDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newComment, setNewComment] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
-  const [updatingStatus, setUpdatingStatus] = useState(false);
-  
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
   const fetchTicketDetails = async () => {
+    setLoading(true);
     try {
-      const response = await axiosInstance.get(`/agent/tickets/${id}`);
+      const response = await axiosInstance.get(`/admin/tickets/${id}`);
       setTicket(response.data.data);
       setError(null);
     } catch (err: any) {
@@ -83,21 +75,6 @@ const AgentTicketDetails: React.FC = () => {
       commentsEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [ticket?.comments]);
-
-  const handleStatusChange = async (event: any) => {
-    const newStatus = event.target.value;
-    setUpdatingStatus(true);
-    try {
-      await axiosInstance.patch(`/agent/tickets/${id}/status`, { status: newStatus });
-      setTicket(prev => prev ? { ...prev, status: newStatus } : null);
-      showToast('Ticket status updated successfully', 'success');
-    } catch (err: any) {
-      console.error("Failed to update status", err);
-      alert('Failed to update status.');
-    } finally {
-      setUpdatingStatus(false);
-    }
-  };
 
   const handleSendComment = async () => {
     if (!newComment.trim()) return;
@@ -141,14 +118,14 @@ const AgentTicketDetails: React.FC = () => {
   };
 
   return (
-    <AgentLayout>
+    <AdminLayout>
       <Box sx={{ p: 3, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', overflow: 'hidden' }}>
         <Button 
           startIcon={<ArrowBackIcon fontSize="small" />}
-          onClick={() => navigate('/agent/my-tickets')}
+          onClick={() => navigate('/admin/tickets')}
           sx={{ mb: 2, textTransform: 'none', color: 'text.secondary', fontWeight: 600, '&:hover': { backgroundColor: 'transparent', color: '#000' }, flexShrink: 0, alignSelf: 'flex-start' }}
         >
-          Back to My Tickets
+          Back to Admin Tickets
         </Button>
 
         {error && <Alert severity="error" sx={{ mb: 2, flexShrink: 0 }}>{error}</Alert>}
@@ -169,47 +146,14 @@ const AgentTicketDetails: React.FC = () => {
                   </Box>
                   <Typography variant="h6" sx={{ fontWeight: 700 }}>{ticket.subject}</Typography>
                 </Box>
-                
-                {/* Agent Status Updater */}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
-                    Status:
-                  </Typography>
-                  <FormControl size="small" disabled={updatingStatus}>
-                    <Select
-                      value={ticket.status}
-                      onChange={handleStatusChange}
-                      sx={{ 
-                        minWidth: 140, 
-                        fontWeight: 600, 
-                        borderRadius: 2,
-                        '& .MuiSelect-select': { py: 0.5, px: 1.5, fontSize: '0.85rem' }
-                      }}
-                    >
-                      <MenuItem value="Open">Open</MenuItem>
-                      <MenuItem value="In Progress">In Progress</MenuItem>
-                      <MenuItem value="Resolved">Resolved</MenuItem>
-                      <MenuItem value="Closed">Closed</MenuItem>
-                    </Select>
-                  </FormControl>
-                  {updatingStatus && <CircularProgress size={18} />}
-                </Box>
+                <Typography variant="body2" color="text.secondary">
+                  {dayjs(ticket.created_at).format('D MMM YYYY')}
+                </Typography>
               </Box>
 
               <Divider sx={{ my: 1.5 }} />
 
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4, mb: 2 }}>
-                <Box sx={{ flex: '1 1 200px' }}>
-                  <Typography variant="caption" color="text.secondary" gutterBottom sx={{ display: 'block', fontWeight: 600, mb: 0 }}>
-                    CUSTOMER
-                  </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    {ticket.customer ? `${ticket.customer.first_name} ${ticket.customer.last_name}` : 'Unknown'}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {ticket.customer?.email}
-                  </Typography>
-                </Box>
                 <Box sx={{ flex: '1 1 200px' }}>
                   <Typography variant="caption" color="text.secondary" gutterBottom sx={{ display: 'block', fontWeight: 600, mb: 0 }}>
                     CATEGORY
@@ -218,11 +162,21 @@ const AgentTicketDetails: React.FC = () => {
                 </Box>
                 <Box sx={{ flex: '1 1 200px' }}>
                   <Typography variant="caption" color="text.secondary" gutterBottom sx={{ display: 'block', fontWeight: 600, mb: 0 }}>
-                    CREATED ON
+                    PRIORITY
                   </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    {dayjs(ticket.created_at).format('D MMM YYYY, h:mm A')}
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>{ticket.priority}</Typography>
+                </Box>
+                <Box sx={{ flex: '1 1 200px' }}>
+                  <Typography variant="caption" color="text.secondary" gutterBottom sx={{ display: 'block', fontWeight: 600, mb: 0 }}>
+                    SUBMITTED TO
                   </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>{ticket.assignedAgent ? `${ticket.assignedAgent.first_name} ${ticket.assignedAgent.last_name}` : 'Unassigned'}</Typography>
+                </Box>
+                <Box sx={{ flex: '1 1 200px' }}>
+                  <Typography variant="caption" color="text.secondary" gutterBottom sx={{ display: 'block', fontWeight: 600, mb: 0 }}>
+                    CUSTOMER
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>{ticket.customer ? `${ticket.customer.first_name} ${ticket.customer.last_name}` : '-'}</Typography>
                 </Box>
               </Box>
 
@@ -243,21 +197,21 @@ const AgentTicketDetails: React.FC = () => {
               <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', p: 1, mb: 2 }}>
                 {(!ticket.comments || ticket.comments.length === 0) ? (
                   <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 4 }}>
-                    No messages yet. Start the conversation!
+                    No messages yet.
                   </Typography>
                 ) : (
                   ticket.comments.map((comment) => {
-                    const isAgent = comment.sender.role === 'AGENT' || comment.sender.role === 'ADMIN';
+                    const isAdmin = comment.sender.role === 'ADMIN';
                     return (
-                      <Box key={comment.id} sx={{ display: 'flex', gap: 2, flexDirection: isAgent ? 'row-reverse' : 'row' }}>
-                        <Avatar sx={{ bgcolor: isAgent ? 'primary.main' : 'secondary.main', width: 36, height: 36, fontSize: '0.9rem' }}>
+                      <Box key={comment.id} sx={{ display: 'flex', gap: 2, flexDirection: isAdmin ? 'row-reverse' : 'row' }}>
+                        <Avatar sx={{ bgcolor: isAdmin ? 'primary.main' : 'secondary.main', width: 36, height: 36, fontSize: '0.9rem' }}>
                           {getInitials(comment.sender.first_name, comment.sender.last_name)}
                         </Avatar>
                         <Box sx={{ maxWidth: '75%' }}>
-                          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 0.5, flexDirection: isAgent ? 'row-reverse' : 'row' }}>
+                          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 0.5, flexDirection: isAdmin ? 'row-reverse' : 'row' }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                                {comment.sender.first_name} {comment.sender.last_name} {isAgent && '(You)'}
+                                {comment.sender.first_name} {comment.sender.last_name} {isAdmin && '(You)'}
                               </Typography>
                               <Box component="span" sx={{ px: 0.75, py: 0.25, bgcolor: '#000', borderRadius: 1, fontSize: '0.65rem', color: '#fff', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                                 {comment.sender.role}
@@ -267,7 +221,7 @@ const AgentTicketDetails: React.FC = () => {
                               {dayjs(comment.created_at).format('MMM D, h:mm A')}
                             </Typography>
                           </Box>
-                          <Paper sx={{ p: 2, bgcolor: isAgent ? '#e3f2fd' : '#f5f5f5', borderRadius: 2, boxShadow: 'none' }}>
+                          <Paper sx={{ p: 2, bgcolor: isAdmin ? '#e3f2fd' : '#f5f5f5', borderRadius: 2, boxShadow: 'none' }}>
                             <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
                               {comment.message}
                             </Typography>
@@ -289,7 +243,7 @@ const AgentTicketDetails: React.FC = () => {
                   multiline
                   minRows={2}
                   maxRows={4}
-                  placeholder="Type a message to the customer..."
+                  placeholder="Type a message to the customer/agent..."
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
                   variant="outlined"
@@ -312,8 +266,8 @@ const AgentTicketDetails: React.FC = () => {
           <Alert severity="warning">Ticket details not found.</Alert>
         )}
       </Box>
-    </AgentLayout>
+    </AdminLayout>
   );
 };
 
-export default AgentTicketDetails;
+export default AdminTicketDetails;

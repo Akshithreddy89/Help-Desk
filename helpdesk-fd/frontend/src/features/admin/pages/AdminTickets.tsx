@@ -2,15 +2,20 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Typography, TextField, InputAdornment, MenuItem, Select,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Paper, Avatar, Button, Menu, CircularProgress
+  Paper, Avatar, Button, Menu, CircularProgress, IconButton,
+  Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText,
+  FormControl, InputLabel
 } from '@mui/material';
 import {
   Search as SearchIcon,
   PersonAddAlt as AssignIcon,
-  KeyboardArrowDown as ArrowDownIcon
+  FormatListBulleted as ListDashIcon,
+  Visibility as ViewIcon,
+  Close as CloseIcon
 } from '@mui/icons-material';
 import AdminLayout from '../components/AdminLayout';
 import axiosInstance from '../../../utils/axios';
+import { useNavigate } from 'react-router-dom';
 
 interface User {
   first_name: string;
@@ -41,6 +46,7 @@ const AdminTickets: React.FC = () => {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
+  const navigate = useNavigate();
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -51,6 +57,9 @@ const AdminTickets: React.FC = () => {
   // Assign Menu State
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [selectedAgentToAssign, setSelectedAgentToAssign] = useState('');
 
   const fetchTickets = useCallback(async () => {
     setLoading(true);
@@ -104,14 +113,31 @@ const AdminTickets: React.FC = () => {
 
   const handleCloseMenu = () => {
     setAnchorEl(null);
-    setSelectedTicketId(null);
   };
 
-  const handleAssignAgent = async (agentId: string) => {
-    if (!selectedTicketId) return;
+  const handleOpenAssignDialog = () => {
+    setAssignDialogOpen(true);
+    handleCloseMenu();
+  };
+
+  const handleCloseAssignDialog = () => {
+    setAssignDialogOpen(false);
+    setSelectedAgentToAssign('');
+  };
+
+  const handleOpenConfirmDialog = () => {
+    setConfirmDialogOpen(true);
+  };
+
+  const handleCloseConfirmDialog = () => {
+    setConfirmDialogOpen(false);
+  };
+
+  const handleConfirmAssign = async () => {
+    if (!selectedTicketId || !selectedAgentToAssign) return;
     try {
       const response = await axiosInstance.patch(`/admin/tickets/${selectedTicketId}/assign`, {
-        agent_id: agentId
+        agent_id: selectedAgentToAssign
       });
       if (response.data.success) {
         fetchTickets(); // Refresh list after assignment
@@ -119,7 +145,10 @@ const AdminTickets: React.FC = () => {
     } catch (error) {
       console.error('Failed to assign ticket', error);
     } finally {
-      handleCloseMenu();
+      handleCloseConfirmDialog();
+      handleCloseAssignDialog();
+      setSelectedTicketId(null);
+      setSelectedAgentToAssign('');
     }
   };
 
@@ -166,7 +195,7 @@ const AdminTickets: React.FC = () => {
 
   return (
     <AdminLayout>
-      <Box sx={{ p: 4, maxWidth: 1200, width: '100%', margin: '0 auto', height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', overflow: 'hidden' }}>
+      <Box sx={{ p: 3, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', overflow: 'hidden' }}>
         
         {/* Header */}
         <Box sx={{ mb: 4, flexShrink: 0 }}>
@@ -193,7 +222,14 @@ const AdminTickets: React.FC = () => {
                   <InputAdornment position="start">
                     <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
                   </InputAdornment>
-                )
+                ),
+                endAdornment: searchTerm ? (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={() => setSearchTerm('')} edge="end">
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null,
               }
             }}
           />
@@ -247,14 +283,14 @@ const AdminTickets: React.FC = () => {
           <Table stickyHeader sx={{ minWidth: 900 }}>
             <TableHead>
               <TableRow sx={{ '& th': { borderBottom: '1px solid #eee', color: 'text.secondary', fontWeight: 'bold', fontSize: '0.75rem', bgcolor: 'white' } }}>
-                <TableCell>TICKET ID</TableCell>
+                <TableCell sx={{ position: 'sticky', left: 0, bgcolor: 'white', zIndex: 3 }}>TICKET ID</TableCell>
                 <TableCell>TITLE</TableCell>
                 <TableCell>CUSTOMER</TableCell>
                 <TableCell>STATUS</TableCell>
                 <TableCell>PRIORITY</TableCell>
                 <TableCell>ASSIGNED AGENT</TableCell>
                 <TableCell>DATE</TableCell>
-                <TableCell align="right">ACTION</TableCell>
+                <TableCell align="right" sx={{ position: 'sticky', right: 0, bgcolor: 'white', zIndex: 3 }}>ACTION</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -275,7 +311,7 @@ const AdminTickets: React.FC = () => {
               ) : (
                 tickets.map((ticket) => (
                   <TableRow key={ticket.id} sx={{ '& td': { borderBottom: '1px solid #eee' }, '&:last-child td': { borderBottom: 0 } }}>
-                    <TableCell>
+                    <TableCell sx={{ position: 'sticky', left: 0, bgcolor: 'white', zIndex: 1 }}>
                       <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
                         {ticket.ticket_number}
                       </Typography>
@@ -355,23 +391,10 @@ const AdminTickets: React.FC = () => {
                         {formatDate(ticket.created_at)}
                       </Typography>
                     </TableCell>
-                    <TableCell align="right">
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<AssignIcon fontSize="small" />}
-                        endIcon={<ArrowDownIcon fontSize="small" />}
-                        onClick={(e) => handleAssignClick(e, ticket.id)}
-                        sx={{ 
-                          textTransform: 'none', 
-                          borderColor: '#e0e0e0',
-                          color: '#333',
-                          '&:hover': { bgcolor: '#f5f5f5', borderColor: '#ccc' },
-                          borderRadius: 2
-                        }}
-                      >
-                        Assign
-                      </Button>
+                    <TableCell align="right" sx={{ position: 'sticky', right: 0, bgcolor: 'white', zIndex: 1 }}>
+                      <IconButton onClick={(e) => handleAssignClick(e, ticket.id)}>
+                        <ListDashIcon />
+                      </IconButton>
                     </TableCell>
                   </TableRow>
                 ))
@@ -380,7 +403,7 @@ const AdminTickets: React.FC = () => {
           </Table>
         </TableContainer>
 
-        {/* Assignment Menu */}
+        {/* Action Menu */}
         <Menu
           anchorEl={anchorEl}
           open={Boolean(anchorEl)}
@@ -388,39 +411,73 @@ const AdminTickets: React.FC = () => {
           slotProps={{
             paper: {
               elevation: 3,
-              sx: { mt: 1, minWidth: 200, borderRadius: 2 }
+              sx: { mt: 1, minWidth: 120, borderRadius: 2 }
             }
           }}
         >
-          <Box sx={{ px: 2, py: 1 }}>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
-              ASSIGN TO AGENT
-            </Typography>
-          </Box>
-          {agents.map((agent) => (
-            <MenuItem 
-              key={agent.id} 
-              onClick={() => handleAssignAgent(agent.id)}
-              sx={{ py: 1.5, display: 'flex', gap: 1.5 }}
-            >
-              <Avatar 
-                sx={{ 
-                  width: 24, height: 24, fontSize: '0.65rem', 
-                  bgcolor: stringToColor(`${agent.first_name} ${agent.last_name}`),
-                  color: 'white', fontWeight: 'bold'
-                }}
-              >
-                {getInitials(agent.first_name, agent.last_name)}
-              </Avatar>
-              <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                {agent.first_name} {agent.last_name}
-              </Typography>
-            </MenuItem>
-          ))}
-          {agents.length === 0 && (
-            <MenuItem disabled>No agents available</MenuItem>
-          )}
+          <MenuItem onClick={() => { handleCloseMenu(); if(selectedTicketId) navigate(`/admin/tickets/${selectedTicketId}`); }}>
+            <ViewIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
+            View
+          </MenuItem>
+          <MenuItem onClick={handleOpenAssignDialog}>
+            <AssignIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
+            Assign
+          </MenuItem>
         </Menu>
+
+        {/* Assign Dialog */}
+        <Dialog open={assignDialogOpen} onClose={handleCloseAssignDialog} maxWidth="sm" fullWidth>
+          <DialogTitle sx={{ fontWeight: 'bold' }}>Assign Ticket</DialogTitle>
+          <DialogContent dividers>
+            {(() => {
+              const selectedTicket = tickets.find(t => t.id === selectedTicketId);
+              if (!selectedTicket) return null;
+              return (
+                <Box>
+                  <Typography variant="body2" gutterBottom><strong>Ticket ID:</strong> {selectedTicket.ticket_number}</Typography>
+                  <Typography variant="body2" gutterBottom><strong>Subject:</strong> {selectedTicket.subject}</Typography>
+                  <Typography variant="body2" gutterBottom><strong>Priority:</strong> {selectedTicket.priority}</Typography>
+                  
+                  <FormControl fullWidth sx={{ mt: 3 }}>
+                    <InputLabel id="assign-agent-label">Assign To</InputLabel>
+                    <Select
+                      labelId="assign-agent-label"
+                      value={selectedAgentToAssign}
+                      label="Assign To"
+                      onChange={(e) => setSelectedAgentToAssign(e.target.value)}
+                    >
+                      {agents.map((agent) => (
+                        <MenuItem key={agent.id} value={agent.id}>
+                          {agent.first_name} {agent.last_name}
+                        </MenuItem>
+                      ))}
+                      {agents.length === 0 && (
+                        <MenuItem disabled value="">No agents available</MenuItem>
+                      )}
+                    </Select>
+                  </FormControl>
+                </Box>
+              );
+            })()}
+          </DialogContent>
+          <DialogActions sx={{ p: 2 }}>
+            <Button onClick={handleCloseAssignDialog} color="inherit">Cancel</Button>
+            <Button onClick={handleOpenConfirmDialog} variant="contained" disabled={!selectedAgentToAssign}>Assign</Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Confirm Dialog */}
+        <Dialog open={confirmDialogOpen} onClose={handleCloseConfirmDialog}>
+          <DialogContent sx={{ minWidth: 300, textAlign: 'center', py: 4 }}>
+            <DialogContentText sx={{ color: 'text.primary', fontWeight: 500 }}>
+              Are you sure you want to assign this ticket to this agent?
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions sx={{ justifyContent: 'center', pb: 3 }}>
+            <Button onClick={handleCloseConfirmDialog} color="inherit" sx={{ mr: 2 }}>Cancel</Button>
+            <Button onClick={handleConfirmAssign} variant="contained" color="primary">OK</Button>
+          </DialogActions>
+        </Dialog>
 
         {/* Footer */}
         {!loading && (

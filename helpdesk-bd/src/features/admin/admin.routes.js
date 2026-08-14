@@ -41,4 +41,12 @@ router.patch(
   adminController.assignTicket,
 );
 
+// Get Ticket by ID (Admin only)
+router.get(
+  "/tickets/:id",
+  authMiddleware,
+  authorizeRoles("ADMIN"),
+  adminController.getTicketById,
+);
+
 module.exports = router;

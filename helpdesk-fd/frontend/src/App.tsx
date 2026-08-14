@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ToastProvider } from './context/ToastContext';
 import LoginPage from './features/auth/pages/LoginPage';
 import RegisterPage from './features/auth/pages/RegisterPage';
 import SetPasswordPage from './features/auth/pages/SetPasswordPage';
@@ -6,6 +7,7 @@ import CustomerDashboard from './features/customer/pages/CustomerDashboard';
 import AdminDashboard from './features/admin/pages/AdminDashboard';
 import AdminAgents from './features/admin/pages/AdminAgents';
 import AdminTickets from './features/admin/pages/AdminTickets';
+import AdminTicketDetails from './features/admin/pages/AdminTicketDetails';
 import AgentDashboard from './features/agent/pages/AgentDashboard';
 import AgentTickets from './features/agent/pages/AgentTickets';
 import AgentTicketDetails from "./features/agent/pages/AgentTicketDetails";
@@ -36,7 +38,8 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode,
 function App() {
   return (
     <Router>
-      <Routes>
+      <ToastProvider>
+        <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/set-password" element={<SetPasswordPage />} />
@@ -100,6 +103,14 @@ function App() {
           } 
         />
         <Route 
+          path="/admin/tickets/:id" 
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminTicketDetails />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
           path="/agent/dashboard" 
           element={
             <ProtectedRoute allowedRoles={['agent']}>
@@ -126,6 +137,7 @@ function App() {
         {/* Default route */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
+      </ToastProvider>
     </Router>
   );
 }

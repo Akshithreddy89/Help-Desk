@@ -42,7 +42,7 @@ const CustomerProfile: React.FC = () => {
 
   return (
     <CustomerLayout>
-      <Box sx={{ maxWidth: 800, mx: 'auto', mt: 2 }}>
+      <Box sx={{ p: 3, width: '100%', boxSizing: 'border-box' }}>
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
             <CircularProgress />

@@ -9,12 +9,14 @@ import {
   HelpOutlined as HelpOutlineIcon,
   Menu as MenuIcon
 } from '@mui/icons-material';
+import LogoutDialog from '../../../components/LogoutDialog';
 
 const DRAWER_WIDTH_EXPANDED = 240;
 const DRAWER_WIDTH_COLLAPSED = 72;
 
 const Sidebar: React.FC = () => {
   const [expanded, setExpanded] = useState(true);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -24,8 +26,15 @@ const Sidebar: React.FC = () => {
     { title: 'Profile', icon: <PersonOutlineIcon />, path: '/customer/profile' },
   ];
 
-  const handleLogout = () => {
+  const handleLogoutClick = () => {
+    setLogoutDialogOpen(true);
+  };
+
+  const handleConfirmLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    sessionStorage.setItem('toastMessage', 'Logged out successfully');
+    setLogoutDialogOpen(false);
     navigate('/login');
   };
 
@@ -108,7 +117,7 @@ const Sidebar: React.FC = () => {
       <List sx={{ px: 1, pb: 2 }}>
         <ListItem disablePadding>
           <ListItemButton
-            onClick={handleLogout}
+            onClick={handleLogoutClick}
             sx={{
               borderRadius: 2,
               justifyContent: expanded ? 'initial' : 'center',
@@ -139,6 +148,12 @@ const Sidebar: React.FC = () => {
           </ListItemButton>
         </ListItem>
       </List>
+
+      <LogoutDialog
+        open={logoutDialogOpen}
+        onClose={() => setLogoutDialogOpen(false)}
+        onConfirm={handleConfirmLogout}
+      />
     </Box>
   );
 };

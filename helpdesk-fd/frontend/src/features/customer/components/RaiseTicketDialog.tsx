@@ -4,6 +4,7 @@ import { Close as CloseIcon } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
 import axiosInstance from '../../../utils/axios';
+import { useToast } from '../../../context/ToastContext';
 
 interface RaiseTicketDialogProps {
   open: boolean;
@@ -20,6 +21,7 @@ const validationSchema = yup.object({
 
 const RaiseTicketDialog: React.FC<RaiseTicketDialogProps> = ({ open, onClose, onSuccess }) => {
   const [apiError, setApiError] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   const formik = useFormik({
     initialValues: {
@@ -33,6 +35,7 @@ const RaiseTicketDialog: React.FC<RaiseTicketDialogProps> = ({ open, onClose, on
       setApiError(null);
       try {
         await axiosInstance.post('/tickets', values);
+        showToast('Ticket raised successfully', 'success');
         resetForm();
         onSuccess();
         onClose();

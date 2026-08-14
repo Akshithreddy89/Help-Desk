@@ -7,6 +7,7 @@ import { Close as CloseIcon } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
 import axiosInstance from '../../../utils/axios';
+import { useToast } from '../../../context/ToastContext';
 
 interface AddAgentDialogProps {
   open: boolean;
@@ -23,6 +24,7 @@ const validationSchema = yup.object({
 
 const AddAgentDialog: React.FC<AddAgentDialogProps> = ({ open, onClose, onAgentAdded }) => {
   const [error, setError] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   const formik = useFormik({
     initialValues: {
@@ -37,6 +39,7 @@ const AddAgentDialog: React.FC<AddAgentDialogProps> = ({ open, onClose, onAgentA
       try {
         const response = await axiosInstance.post('/admin/agents', values);
         if (response.data.success) {
+          showToast('Agent added successfully', 'success');
           resetForm();
           onAgentAdded();
           onClose();

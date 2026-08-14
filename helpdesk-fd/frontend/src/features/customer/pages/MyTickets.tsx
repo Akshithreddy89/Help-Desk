@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, Button, TextField, CircularProgress, Alert, Paper, Chip, ToggleButtonGroup, ToggleButton } from '@mui/material';
-import { Add as AddIcon } from '@mui/icons-material';
+import { Box, Typography, Button, TextField, CircularProgress, Alert, Paper, Chip, ToggleButtonGroup, ToggleButton, InputAdornment, IconButton } from '@mui/material';
+import { Add as AddIcon, Search as SearchIcon, Close as CloseIcon } from '@mui/icons-material';
 import CustomerLayout from '../components/CustomerLayout';
 import RaiseTicketDialog from '../components/RaiseTicketDialog';
 import axiosInstance from '../../../utils/axios';
@@ -85,8 +85,8 @@ const MyTickets: React.FC = () => {
 
   return (
     <CustomerLayout>
-      <Box sx={{ p: 3, maxWidth: 1000, mx: 'auto', height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <Box sx={{ mb: 4 }}>
+      <Box sx={{ p: 3, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', overflow: 'hidden' }}>
+        <Box sx={{ mb: 4, flexShrink: 0 }}>
           <Typography variant="h5" sx={{ fontWeight: 700 }} gutterBottom>My Tickets</Typography>
           <Typography variant="body2" color="text.secondary">
             Track and manage all your submitted tickets.
@@ -101,6 +101,22 @@ const MyTickets: React.FC = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             sx={{ width: { xs: '100%', md: 300 }, backgroundColor: '#fff', borderRadius: 1 }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+                  </InputAdornment>
+                ),
+                endAdornment: search ? (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={() => setSearch('')} edge="end">
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null,
+              },
+            }}
           />
 
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>

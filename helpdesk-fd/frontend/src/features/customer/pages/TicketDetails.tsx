@@ -119,76 +119,76 @@ const TicketDetails: React.FC = () => {
 
   return (
     <CustomerLayout>
-      <Box sx={{ p: 3, maxWidth: 1000, mx: 'auto' }}>
+      <Box sx={{ p: 3, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', overflow: 'hidden' }}>
         <Button 
           startIcon={<ArrowBackIcon fontSize="small" />}
           onClick={() => navigate('/customer/tickets')}
-          sx={{ mb: 3, textTransform: 'none', color: 'text.secondary', fontWeight: 600, '&:hover': { backgroundColor: 'transparent', color: '#000' } }}
+          sx={{ mb: 2, textTransform: 'none', color: 'text.secondary', fontWeight: 600, '&:hover': { backgroundColor: 'transparent', color: '#000' }, flexShrink: 0, alignSelf: 'flex-start' }}
         >
           Back to My Tickets
         </Button>
 
-        {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+        {error && <Alert severity="error" sx={{ mb: 2, flexShrink: 0 }}>{error}</Alert>}
 
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}>
             <CircularProgress />
           </Box>
         ) : ticket ? (
-          <Box>
-            <Paper sx={{ p: 4, borderRadius: 3, border: '1px solid #eee', boxShadow: 'none' }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+            <Paper sx={{ p: 2, borderRadius: 3, border: '1px solid #eee', boxShadow: 'none', flexShrink: 0, mb: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
                 <Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 0.5 }}>
                     <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>{ticket.ticket_number}</Typography>
-                    <Chip label={ticket.status} color={getStatusColor(ticket.status) as any} size="small" variant="outlined" sx={{ fontWeight: 600 }} />
-                    <Typography variant="body2" sx={{ color: getPriorityColor(ticket.priority), fontWeight: 600 }}>{ticket.priority} Priority</Typography>
+                    <Chip label={ticket.status} color={getStatusColor(ticket.status) as any} size="small" variant="outlined" sx={{ fontWeight: 600, height: 20, fontSize: '0.7rem' }} />
+                    <Typography variant="body2" sx={{ color: getPriorityColor(ticket.priority), fontWeight: 600, fontSize: '0.8rem' }}>{ticket.priority} Priority</Typography>
                   </Box>
-                  <Typography variant="h5" sx={{ fontWeight: 700 }}>{ticket.subject}</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>{ticket.subject}</Typography>
                 </Box>
                 <Typography variant="body2" color="text.secondary">
                   {dayjs(ticket.created_at).format('D MMM YYYY')}
                 </Typography>
               </Box>
 
-              <Divider sx={{ my: 3 }} />
+              <Divider sx={{ my: 1.5 }} />
 
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4, mb: 4 }}>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4, mb: 2 }}>
                 <Box sx={{ flex: '1 1 200px' }}>
-                  <Typography variant="caption" color="text.secondary" gutterBottom sx={{ display: 'block', fontWeight: 600 }}>
+                  <Typography variant="caption" color="text.secondary" gutterBottom sx={{ display: 'block', fontWeight: 600, mb: 0 }}>
                     CATEGORY
                   </Typography>
                   <Typography variant="body2" sx={{ fontWeight: 500 }}>{ticket.category}</Typography>
                 </Box>
                 <Box sx={{ flex: '1 1 200px' }}>
-                  <Typography variant="caption" color="text.secondary" gutterBottom sx={{ display: 'block', fontWeight: 600 }}>
+                  <Typography variant="caption" color="text.secondary" gutterBottom sx={{ display: 'block', fontWeight: 600, mb: 0 }}>
                     PRIORITY
                   </Typography>
                   <Typography variant="body2" sx={{ fontWeight: 500 }}>{ticket.priority}</Typography>
                 </Box>
                 <Box sx={{ flex: '1 1 200px' }}>
-                  <Typography variant="caption" color="text.secondary" gutterBottom sx={{ display: 'block', fontWeight: 600 }}>
+                  <Typography variant="caption" color="text.secondary" gutterBottom sx={{ display: 'block', fontWeight: 600, mb: 0 }}>
                     SUBMITTED TO
                   </Typography>
                   <Typography variant="body2" sx={{ fontWeight: 500 }}>{ticket.assignedAgent ? `${ticket.assignedAgent.first_name} ${ticket.assignedAgent.last_name}` : 'Unassigned'}</Typography>
                 </Box>
               </Box>
 
-              <Box sx={{ backgroundColor: '#fafafa', p: 3, borderRadius: 2 }}>
-                <Typography variant="caption" color="text.secondary" gutterBottom sx={{ display: 'block', fontWeight: 600 }}>
+              <Box sx={{ backgroundColor: '#fafafa', p: 1.5, borderRadius: 2 }}>
+                <Typography variant="caption" color="text.secondary" gutterBottom sx={{ display: 'block', fontWeight: 600, mb: 0 }}>
                   Description
                 </Typography>
-                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>
                   {ticket.description}
                 </Typography>
               </Box>
             </Paper>
 
             {/* Conversation / Comments Section */}
-            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, mt: 4 }}>Conversation</Typography>
-            <Paper sx={{ p: 4, borderRadius: 3, border: '1px solid #eee', boxShadow: 'none' }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 1, flexShrink: 0 }}>Conversation</Typography>
+            <Paper sx={{ p: 2, borderRadius: 3, border: '1px solid #eee', boxShadow: 'none', flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mb: 4, maxHeight: 500, overflowY: 'auto', p: 1 }}>
+              <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', p: 1, mb: 2 }}>
                 {(!ticket.comments || ticket.comments.length === 0) ? (
                   <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 4 }}>
                     No messages yet. Start the conversation!
@@ -203,9 +203,14 @@ const TicketDetails: React.FC = () => {
                         </Avatar>
                         <Box sx={{ maxWidth: '75%' }}>
                           <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 0.5, flexDirection: isCustomer ? 'row-reverse' : 'row' }}>
-                            <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                              {comment.sender.first_name} {comment.sender.last_name} {isCustomer && '(You)'}
-                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                                {comment.sender.first_name} {comment.sender.last_name} {isCustomer && '(You)'}
+                              </Typography>
+                              <Box component="span" sx={{ px: 0.75, py: 0.25, bgcolor: '#000', borderRadius: 1, fontSize: '0.65rem', color: '#fff', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                {comment.sender.role}
+                              </Box>
+                            </Box>
                             <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
                               {dayjs(comment.created_at).format('MMM D, h:mm A')}
                             </Typography>
@@ -223,10 +228,10 @@ const TicketDetails: React.FC = () => {
                 <div ref={commentsEndRef} />
               </Box>
 
-              <Divider sx={{ mb: 3 }} />
+              <Divider sx={{ mb: 2, flexShrink: 0 }} />
 
               {/* Add Comment Input */}
-              <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexShrink: 0 }}>
                 <TextField
                   fullWidth
                   multiline

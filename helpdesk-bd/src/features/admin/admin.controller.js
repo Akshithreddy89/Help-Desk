@@ -1,5 +1,5 @@
 const User = require("../../models/user.model");
-const { Ticket } = require("../../models");
+const { Ticket, TicketComment } = require("../../models");
 const { Op } = require("sequelize");
 const { sendTestEmail } = require("../../services/email.service");
 const { v4: uuidv4 } = require("uuid");
@@ -335,9 +335,70 @@ const assignTicket = async (req, res) => {
   }
 };
 
+// =========================
+// Get Ticket by ID (Admin)
+// =========================
+
+const getTicketById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const ticket = await Ticket.findOne({
+      where: {
+        id,
+      },
+      include: [
+        {
+          model: User,
+          as: "customer",
+          attributes: ["first_name", "last_name", "email"],
+        },
+        {
+          model: User,
+          as: "assignedAgent",
+          attributes: ["first_name", "last_name", "email"],
+        },
+        {
+          model: TicketComment,
+          as: "comments",
+          include: [
+            {
+              model: User,
+              as: "sender",
+              attributes: ["first_name", "last_name", "role"],
+            }
+          ]
+        },
+      ],
+      order: [
+        [{ model: TicketComment, as: 'comments' }, 'created_at', 'ASC']
+      ]
+    });
+
+    if (!ticket) {
+      return res.status(404).json({
+        success: false,
+        message: "Ticket not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: ticket,
+    });
+  } catch (error) {
+    console.error("Error fetching ticket:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch ticket details.",
+    });
+  }
+};
+
 module.exports = {
   createAgent,
   getAllAgents,
   getAllTickets,
   assignTicket,
+  getTicketById,
 };

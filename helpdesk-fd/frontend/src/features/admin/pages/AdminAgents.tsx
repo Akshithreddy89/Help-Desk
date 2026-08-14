@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { 
   Box, Typography, Button, TextField, InputAdornment, 
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, 
-  Paper, Avatar
+  Paper, Avatar, IconButton
 } from '@mui/material';
 import { 
   Search as SearchIcon,
   Add as AddIcon,
+  Close as CloseIcon
 } from '@mui/icons-material';
 import AdminLayout from '../components/AdminLayout';
 import AddAgentDialog from '../components/AddAgentDialog';
@@ -86,7 +87,7 @@ const AdminAgents: React.FC = () => {
 
   return (
     <AdminLayout>
-      <Box sx={{ p: 4, maxWidth: 1200, width: '100%', margin: '0 auto', height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', overflow: 'hidden' }}>
+      <Box sx={{ p: 3, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', overflow: 'hidden' }}>
         <Box sx={{ mb: 4, flexShrink: 0 }}>
           <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 1, fontFamily: 'serif' }}>
             Agents
@@ -109,7 +110,14 @@ const AdminAgents: React.FC = () => {
                   <InputAdornment position="start">
                     <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
                   </InputAdornment>
-                )
+                ),
+                endAdornment: searchTerm ? (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={() => setSearchTerm('')} edge="end">
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null,
               }
             }}
           />

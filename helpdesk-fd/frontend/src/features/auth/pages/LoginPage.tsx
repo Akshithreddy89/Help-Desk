@@ -36,6 +36,7 @@ const LoginPage: React.FC = () => {
         if (response.data.success) {
           localStorage.setItem('token', response.data.token);
           localStorage.setItem('user', JSON.stringify(response.data.user));
+          sessionStorage.setItem('toastMessage', 'Logged in successfully');
           // Redirect to the dashboard provided by backend
           navigate(response.data.dashboard);
         }

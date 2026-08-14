@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { 
   Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, 
   TableHead, TableRow, Chip, Button, InputAdornment, TextField, 
-  Select, MenuItem, CircularProgress, Avatar
+  Select, MenuItem, CircularProgress, Avatar, IconButton
 } from '@mui/material';
-import { Search as SearchIcon, Visibility as VisibilityIcon } from '@mui/icons-material';
+import { Search as SearchIcon, Visibility as VisibilityIcon, Close as CloseIcon } from '@mui/icons-material';
 import AgentLayout from '../components/AgentLayout';
 import axiosInstance from '../../../utils/axios';
 import dayjs from 'dayjs';
@@ -41,7 +41,7 @@ const AgentTickets: React.FC = () => {
     },
   });
 
-  const fetchTickets = async () => {
+  const fetchTickets = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -56,12 +56,14 @@ const AgentTickets: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [formik.values.search, formik.values.status, formik.values.priority]);
 
   useEffect(() => {
-    fetchTickets();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formik.values]);
+    const timer = setTimeout(() => {
+      fetchTickets();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [fetchTickets]);
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -88,7 +90,7 @@ const AgentTickets: React.FC = () => {
 
   return (
     <AgentLayout>
-      <Box sx={{ p: 4, maxWidth: 1200, width: '100%', margin: '0 auto', height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', overflow: 'hidden' }}>
+      <Box sx={{ p: 3, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', overflow: 'hidden' }}>
         
         {/* Header */}
         <Box sx={{ mb: 4, flexShrink: 0 }}>
@@ -116,7 +118,14 @@ const AgentTickets: React.FC = () => {
                   <InputAdornment position="start">
                     <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
                   </InputAdornment>
-                )
+                ),
+                endAdornment: formik.values.search ? (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={() => formik.setFieldValue('search', '')} edge="end">
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null,
               }
             }}
           />
