@@ -2,29 +2,32 @@ import React, { useState } from 'react';
 import { Box, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, IconButton, Divider } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
-  DashboardOutlined as DashboardOutlinedIcon,
-  FormatListBulleted as FormatListBulletedIcon,
-  PersonOutlined as PersonOutlineIcon,
   LogoutOutlined as LogoutOutlinedIcon,
-  HelpOutlined as HelpOutlineIcon,
-  Menu as MenuIcon
+  Menu as MenuIcon,
+  HelpOutlined as HelpOutlineIcon
 } from '@mui/icons-material';
-import LogoutDialog from '../../../components/LogoutDialog';
+import LogoutDialog from '../LogoutDialog';
 
 const DRAWER_WIDTH_EXPANDED = 240;
 const DRAWER_WIDTH_COLLAPSED = 72;
 
-const Sidebar: React.FC = () => {
+export interface MenuItem {
+  title: string;
+  icon: React.ReactNode;
+  path: string;
+}
+
+export interface SharedSidebarProps {
+  menuItems: MenuItem[];
+  headerBadge?: React.ReactNode;
+  collapseIconType?: 'menu' | 'help';
+}
+
+const SharedSidebar: React.FC<SharedSidebarProps> = ({ menuItems, headerBadge, collapseIconType = 'menu' }) => {
   const [expanded, setExpanded] = useState(true);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-
-  const menuItems = [
-    { title: 'Dashboard', icon: <DashboardOutlinedIcon />, path: '/customer/dashboard' },
-    { title: 'My Tickets', icon: <FormatListBulletedIcon />, path: '/customer/tickets' },
-    { title: 'Profile', icon: <PersonOutlineIcon />, path: '/customer/profile' },
-  ];
 
   const handleLogoutClick = () => {
     setLogoutDialogOpen(true);
@@ -38,49 +41,58 @@ const Sidebar: React.FC = () => {
     navigate('/login');
   };
 
-  const drawerWidth = expanded ? DRAWER_WIDTH_EXPANDED : DRAWER_WIDTH_COLLAPSED;
+  const isSelected = (path: string) => location.pathname === path;
 
   return (
     <Box
       sx={{
-        width: drawerWidth,
+        width: expanded ? DRAWER_WIDTH_EXPANDED : DRAWER_WIDTH_COLLAPSED,
         flexShrink: 0,
         height: '100vh',
-        backgroundColor: '#111315',
-        color: '#fff',
+        bgcolor: '#111318',
+        color: 'white',
         display: 'flex',
         flexDirection: 'column',
-        transition: 'width 0.2s',
+        transition: 'width 0.3s',
         overflowX: 'hidden',
       }}
     >
-      {/* Header Area */}
-      <Box sx={{ display: 'flex', alignItems: 'center', p: 2, height: 64 }}>
-        <IconButton onClick={() => setExpanded(!expanded)} sx={{ color: '#fff', mr: expanded ? 1 : 0 }}>
-          {expanded ? <HelpOutlineIcon /> : <MenuIcon />}
-        </IconButton>
+      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: expanded ? 'space-between' : 'center', mb: 2, height: 64 }}>
+        {collapseIconType === 'help' && !expanded ? (
+           <IconButton onClick={() => setExpanded(!expanded)} sx={{ color: 'white', ml: -1 }}>
+             <HelpOutlineIcon />
+           </IconButton>
+        ) : null}
+
         {expanded && (
-          <Typography variant="h6" sx={{ fontWeight: 'bold' }} noWrap>
-            HelpDesk
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>HelpDesk</Typography>
+            {headerBadge}
+          </Box>
         )}
+        
+        {collapseIconType === 'menu' || expanded ? (
+          <IconButton onClick={() => setExpanded(!expanded)} sx={{ color: 'white' }}>
+            <MenuIcon />
+          </IconButton>
+        ) : null}
       </Box>
 
-      {/* Nav Links */}
       <List sx={{ flexGrow: 1, px: 1 }}>
         {menuItems.map((item) => {
-          const isActive = location.pathname === item.path;
+          const active = isSelected(item.path);
           return (
-            <ListItem key={item.title} disablePadding sx={{ mb: 1 }}>
+            <ListItem key={item.title} disablePadding sx={{ mb: 0.5 }}>
               <ListItemButton
                 onClick={() => navigate(item.path)}
                 sx={{
-                  borderRadius: 2,
+                  minHeight: 48,
                   justifyContent: expanded ? 'initial' : 'center',
                   px: 2.5,
-                  backgroundColor: isActive ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                  borderRadius: 2,
+                  bgcolor: active ? 'rgba(255,255,255,0.1)' : 'transparent',
                   '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                    bgcolor: 'rgba(255,255,255,0.15)',
                   },
                 }}
               >
@@ -89,20 +101,20 @@ const Sidebar: React.FC = () => {
                     minWidth: 0,
                     mr: expanded ? 2 : 'auto',
                     justifyContent: 'center',
-                    color: isActive ? '#fff' : '#aaa',
+                    color: active ? 'white' : '#aaa',
                   }}
                 >
                   {item.icon}
                 </ListItemIcon>
-                <ListItemText
-                  primary={item.title}
+                <ListItemText 
+                  primary={
+                    <Typography sx={{ fontWeight: active ? 'bold' : 'normal', fontSize: '0.9rem', color: active ? 'white' : '#aaa' }}>
+                      {item.title}
+                    </Typography>
+                  }
                   sx={{
                     opacity: expanded ? 1 : 0,
                     display: expanded ? 'block' : 'none',
-                    color: isActive ? '#fff' : '#aaa',
-                    '& .MuiTypography-root': {
-                      fontWeight: isActive ? 600 : 400,
-                    }
                   }}
                 />
               </ListItemButton>
@@ -113,17 +125,17 @@ const Sidebar: React.FC = () => {
 
       <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
 
-      {/* Footer / Logout */}
       <List sx={{ px: 1, pb: 2 }}>
         <ListItem disablePadding>
           <ListItemButton
             onClick={handleLogoutClick}
             sx={{
-              borderRadius: 2,
+              minHeight: 48,
               justifyContent: expanded ? 'initial' : 'center',
               px: 2.5,
+              borderRadius: 2,
               '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                bgcolor: 'rgba(255,255,255,0.1)',
               },
             }}
           >
@@ -137,12 +149,11 @@ const Sidebar: React.FC = () => {
             >
               <LogoutOutlinedIcon />
             </ListItemIcon>
-            <ListItemText
-              primary="Logout"
+            <ListItemText 
+              primary={<Typography sx={{ fontSize: '0.9rem', color: '#aaa' }}>Logout</Typography>} 
               sx={{
                 opacity: expanded ? 1 : 0,
                 display: expanded ? 'block' : 'none',
-                color: '#aaa',
               }}
             />
           </ListItemButton>
@@ -158,4 +169,4 @@ const Sidebar: React.FC = () => {
   );
 };
 
-export default Sidebar;
+export default SharedSidebar;

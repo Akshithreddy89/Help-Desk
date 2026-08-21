@@ -4,6 +4,7 @@ import CustomerLayout from '../components/CustomerLayout';
 import axiosInstance from '../../../utils/axios';
 import EditProfileDialog from '../components/EditProfileDialog';
 import SetPasswordDialog from '../components/SetPasswordDialog';
+import { useToast } from '../../../context/ToastContext';
 
 interface ProfileData {
   first_name: string;
@@ -20,6 +21,8 @@ const CustomerProfile: React.FC = () => {
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  
+  const { showToast } = useToast();
 
   const fetchProfile = async () => {
     try {
@@ -123,7 +126,10 @@ const CustomerProfile: React.FC = () => {
         <EditProfileDialog
           open={editDialogOpen}
           onClose={() => setEditDialogOpen(false)}
-          onSuccess={fetchProfile}
+          onSuccess={() => {
+            fetchProfile();
+            showToast('Profile updated successfully!');
+          }}
           initialData={{
             first_name: profile.first_name,
             last_name: profile.last_name,
@@ -137,9 +143,10 @@ const CustomerProfile: React.FC = () => {
         open={passwordDialogOpen}
         onClose={() => setPasswordDialogOpen(false)}
         onSuccess={() => {
-          // Could show a toast notification here
+          showToast('Password updated successfully!');
         }}
       />
+      
     </CustomerLayout>
   );
 };

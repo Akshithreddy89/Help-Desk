@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Box, Typography, TextField, InputAdornment, MenuItem, Select,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Paper, Avatar, Button, Menu, CircularProgress, IconButton,
+  Box, Typography, TextField, InputAdornment, MenuItem,
+  Avatar, Button, Menu, IconButton,
   Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText,
-  FormControl, InputLabel
+  FormControl, Autocomplete
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -13,9 +12,16 @@ import {
   Visibility as ViewIcon,
   Close as CloseIcon
 } from '@mui/icons-material';
+import { useToast } from '../../../context/ToastContext';
 import AdminLayout from '../components/AdminLayout';
+import DataTable, { type Column } from '../../../components/DataTable';
+import FilterSelect from '../../../components/FilterSelect';
+import { STATUS_FILTER_OPTIONS, PRIORITY_FILTER_OPTIONS } from '../../../utils/constants';
 import axiosInstance from '../../../utils/axios';
 import { useNavigate } from 'react-router-dom';
+import { getInitials, stringToColor, formatDate } from '../../../utils/ticketHelpers';
+import StatusChip from '../../../components/StatusChip';
+import PriorityChip from '../../../components/PriorityChip';
 
 interface User {
   first_name: string;
@@ -45,7 +51,8 @@ const AdminTickets: React.FC = () => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const navigate = useNavigate();
 
   // Filters
@@ -58,8 +65,10 @@ const AdminTickets: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [selectedAgentToAssign, setSelectedAgentToAssign] = useState('');
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+
+  const { showToast } = useToast();
 
   const fetchTickets = useCallback(async () => {
     setLoading(true);
@@ -69,25 +78,29 @@ const AdminTickets: React.FC = () => {
           search: searchTerm,
           status: statusFilter,
           priority: priorityFilter,
-          agentId: agentFilter
+          agentId: agentFilter,
+          page,
+          size: 10
         }
       });
       if (response.data.success) {
-        setTickets(response.data.data);
-        setTotal(response.data.total);
+        setTickets(response.data.data.tickets);
+        setTotalPages(response.data.data.totalPages);
       }
     } catch (error) {
       console.error('Failed to fetch tickets', error);
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, statusFilter, priorityFilter, agentFilter]);
+  }, [searchTerm, statusFilter, priorityFilter, agentFilter, page]);
 
   const fetchAgents = async () => {
     try {
-      const response = await axiosInstance.get('/admin/agents');
+      const response = await axiosInstance.get('/admin/agents', { params: { size: 1000 } });
       if (response.data.success) {
-        setAgents(response.data.data);
+        // Handle paginated response for agents
+        const agentsData = Array.isArray(response.data.data) ? response.data.data : response.data.data.agents;
+        setAgents(agentsData || []);
       }
     } catch (error) {
       console.error('Failed to fetch agents', error);
@@ -105,6 +118,11 @@ const AdminTickets: React.FC = () => {
     }, 300);
     return () => clearTimeout(delay);
   }, [fetchTickets]);
+
+  // Reset page to 1 when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, statusFilter, priorityFilter, agentFilter]);
 
   const handleAssignClick = (event: React.MouseEvent<HTMLButtonElement>, ticketId: string) => {
     setAnchorEl(event.currentTarget);
@@ -140,6 +158,7 @@ const AdminTickets: React.FC = () => {
         agent_id: selectedAgentToAssign
       });
       if (response.data.success) {
+        showToast('Ticket assigned successfully!');
         fetchTickets(); // Refresh list after assignment
       }
     } catch (error) {
@@ -152,46 +171,76 @@ const AdminTickets: React.FC = () => {
     }
   };
 
-  const getInitials = (firstName?: string, lastName?: string) => {
-    return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase() || '?';
-  };
-
-  const stringToColor = (string: string) => {
-    let hash = 0;
-    for (let i = 0; i < string.length; i += 1) {
-      hash = string.charCodeAt(i) + ((hash << 5) - hash);
+  const columns: Column<Ticket>[] = [
+    {
+      id: 'ticket_number',
+      label: 'TICKET NUMBER',
+      render: (ticket) => (
+        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+          {ticket.ticket_number}
+        </Typography>
+      )
+    },
+    {
+      id: 'subject',
+      label: 'SUBJECT',
+      render: (ticket) => (
+        <Box>
+          <Typography variant="body2" sx={{ fontWeight: 500 }}>{ticket.subject}</Typography>
+          <Typography variant="caption" color="text.secondary">{ticket.category || 'General'}</Typography>
+        </Box>
+      )
+    },
+    {
+      id: 'customer',
+      label: 'CUSTOMER',
+      render: (ticket) => ticket.customer ? (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Avatar sx={{ width: 24, height: 24, fontSize: '0.65rem', bgcolor: '#f5f5f5', color: '#666' }}>
+            {getInitials(ticket.customer.first_name, ticket.customer.last_name)}
+          </Avatar>
+          <Typography variant="body2">{ticket.customer.first_name} {ticket.customer.last_name}</Typography>
+        </Box>
+      ) : <Typography variant="body2" color="text.secondary">-</Typography>
+    },
+    {
+      id: 'status',
+      label: 'STATUS',
+      render: (ticket) => <StatusChip status={ticket.status} />
+    },
+    {
+      id: 'priority',
+      label: 'PRIORITY',
+      render: (ticket) => <PriorityChip priority={ticket.priority} />
+    },
+    {
+      id: 'assignedAgent',
+      label: 'ASSIGNED TO',
+      render: (ticket) => ticket.assignedAgent ? (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Avatar sx={{ width: 24, height: 24, fontSize: '0.65rem', bgcolor: stringToColor(`${ticket.assignedAgent.first_name} ${ticket.assignedAgent.last_name}`), color: 'white', fontWeight: 'bold' }}>
+            {getInitials(ticket.assignedAgent.first_name, ticket.assignedAgent.last_name)}
+          </Avatar>
+          <Typography variant="body2">{ticket.assignedAgent.first_name} {ticket.assignedAgent.last_name}</Typography>
+        </Box>
+      ) : <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>Unassigned</Typography>
+    },
+    {
+      id: 'created_at',
+      label: 'DATE',
+      render: (ticket) => <Typography variant="body2" color="text.secondary">{formatDate(ticket.created_at)}</Typography>
+    },
+    {
+      id: 'actions',
+      label: 'ACTIONS',
+      align: 'right',
+      render: (ticket) => (
+        <IconButton onClick={(e) => handleAssignClick(e, ticket.id)}>
+          <ListDashIcon />
+        </IconButton>
+      )
     }
-    let color = '#';
-    for (let i = 0; i < 3; i += 1) {
-      const value = (hash >> (i * 8)) & 0xff;
-      color += `00${value.toString(16)}`.slice(-2);
-    }
-    return color;
-  };
-
-  const formatDate = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
-    return new Date(dateString).toLocaleDateString('en-GB', options);
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'open': return '#2196F3';
-      case 'in progress': return '#FF9800';
-      case 'resolved': return '#4CAF50';
-      case 'closed': return '#9E9E9E';
-      default: return '#757575';
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority.toLowerCase()) {
-      case 'high': return '#F44336';
-      case 'medium': return '#FF9800';
-      case 'low': return '#9E9E9E';
-      default: return '#757575';
-    }
-  };
+  ];
 
   return (
     <AdminLayout>
@@ -236,172 +285,52 @@ const AdminTickets: React.FC = () => {
 
           {/* Dropdowns - Right Side */}
           <Box sx={{ display: 'flex', gap: 2 }}>
-            <Select
+            <FilterSelect
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              size="small"
-              sx={{ bgcolor: 'white', borderRadius: 2, minWidth: 150 }}
-            >
-              <MenuItem value="All">All Statuses</MenuItem>
-              <MenuItem value="Open">Open</MenuItem>
-              <MenuItem value="In Progress">In Progress</MenuItem>
-              <MenuItem value="Resolved">Resolved</MenuItem>
-              <MenuItem value="Closed">Closed</MenuItem>
-            </Select>
+              onChange={setStatusFilter}
+              options={STATUS_FILTER_OPTIONS}
+            />
 
-            <Select
+            <FilterSelect
               value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value)}
-              size="small"
-              sx={{ bgcolor: 'white', borderRadius: 2, minWidth: 150 }}
-            >
-              <MenuItem value="All">All Priorities</MenuItem>
-              <MenuItem value="Low">Low</MenuItem>
-              <MenuItem value="Medium">Medium</MenuItem>
-              <MenuItem value="High">High</MenuItem>
-            </Select>
+              onChange={setPriorityFilter}
+              options={PRIORITY_FILTER_OPTIONS}
+            />
 
-            <Select
-              value={agentFilter}
-              onChange={(e) => setAgentFilter(e.target.value)}
+            <Autocomplete
+              options={[{ id: 'All', name: 'All Agents' }, ...agents.map(a => ({ id: a.id, name: `${a.first_name} ${a.last_name}` })), { id: 'Unassigned', name: 'Unassigned Tickets' }]}
+              getOptionLabel={(option) => option.name}
+              value={
+                agentFilter === 'All' ? { id: 'All', name: 'All Agents' } :
+                agentFilter === 'Unassigned' ? { id: 'Unassigned', name: 'Unassigned Tickets' } :
+                agents.find(a => a.id === agentFilter) ? { id: agentFilter, name: `${agents.find(a => a.id === agentFilter)?.first_name} ${agents.find(a => a.id === agentFilter)?.last_name}` } :
+                { id: 'All', name: 'All Agents' }
+              }
+              onChange={(_, newValue) => setAgentFilter(newValue ? newValue.id : 'All')}
               size="small"
-              sx={{ bgcolor: 'white', borderRadius: 2, minWidth: 150 }}
-            >
-              <MenuItem value="All">All Agents</MenuItem>
-              {agents.map(agent => (
-                <MenuItem key={agent.id} value={agent.id}>
-                  {agent.first_name} {agent.last_name}
-                </MenuItem>
-              ))}
-              <MenuItem value="Unassigned">Unassigned Tickets</MenuItem>
-            </Select>
+              disableClearable
+              slotProps={{
+                popper: {
+                  placement: 'bottom-start',
+                },
+              }}
+              sx={{ bgcolor: 'white', borderRadius: 2, minWidth: 200 }}
+              renderInput={(params) => <TextField {...params} />}
+            />
           </Box>
         </Box>
 
         {/* Tickets Table */}
-        <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', flexGrow: 1, overflow: 'auto', minHeight: 0 }}>
-          <Table stickyHeader sx={{ minWidth: 900 }}>
-            <TableHead>
-              <TableRow sx={{ '& th': { borderBottom: '1px solid #eee', color: 'text.secondary', fontWeight: 'bold', fontSize: '0.75rem', bgcolor: 'white' } }}>
-                <TableCell sx={{ position: 'sticky', left: 0, bgcolor: 'white', zIndex: 3 }}>TICKET ID</TableCell>
-                <TableCell>TITLE</TableCell>
-                <TableCell>CUSTOMER</TableCell>
-                <TableCell>STATUS</TableCell>
-                <TableCell>PRIORITY</TableCell>
-                <TableCell>ASSIGNED AGENT</TableCell>
-                <TableCell>DATE</TableCell>
-                <TableCell align="right" sx={{ position: 'sticky', right: 0, bgcolor: 'white', zIndex: 3 }}>ACTION</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
-                    <CircularProgress size={24} sx={{ mr: 2 }} />
-                  </TableCell>
-                </TableRow>
-              ) : tickets.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
-                    <Typography variant="body1" color="text.secondary">
-                      No tickets found matching your criteria.
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                tickets.map((ticket) => (
-                  <TableRow key={ticket.id} sx={{ '& td': { borderBottom: '1px solid #eee' }, '&:last-child td': { borderBottom: 0 } }}>
-                    <TableCell sx={{ position: 'sticky', left: 0, bgcolor: 'white', zIndex: 1 }}>
-                      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                        {ticket.ticket_number}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Box>
-                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                          {ticket.subject}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {ticket.category || 'General'}
-                        </Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      {ticket.customer ? (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                          <Avatar 
-                            sx={{ 
-                              width: 24, height: 24, fontSize: '0.65rem', 
-                              bgcolor: '#f5f5f5', color: '#666'
-                            }}
-                          >
-                            {getInitials(ticket.customer.first_name, ticket.customer.last_name)}
-                          </Avatar>
-                          <Typography variant="body2">
-                            {ticket.customer.first_name} {ticket.customer.last_name}
-                          </Typography>
-                        </Box>
-                      ) : (
-                        <Typography variant="body2" color="text.secondary">-</Typography>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ 
-                        display: 'inline-flex', px: 1.5, py: 0.5, borderRadius: 4,
-                        bgcolor: `${getStatusColor(ticket.status)}15`,
-                        color: getStatusColor(ticket.status)
-                      }}>
-                        <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                          {ticket.status}
-                        </Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: getPriorityColor(ticket.priority) }} />
-                        <Typography variant="body2" sx={{ color: getPriorityColor(ticket.priority), fontWeight: 500, fontSize: '0.8125rem' }}>
-                          {ticket.priority}
-                        </Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      {ticket.assignedAgent ? (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                          <Avatar 
-                            sx={{ 
-                              width: 24, height: 24, fontSize: '0.65rem', 
-                              bgcolor: stringToColor(`${ticket.assignedAgent.first_name} ${ticket.assignedAgent.last_name}`),
-                              color: 'white', fontWeight: 'bold'
-                            }}
-                          >
-                            {getInitials(ticket.assignedAgent.first_name, ticket.assignedAgent.last_name)}
-                          </Avatar>
-                          <Typography variant="body2">
-                            {ticket.assignedAgent.first_name} {ticket.assignedAgent.last_name}
-                          </Typography>
-                        </Box>
-                      ) : (
-                        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                          Unassigned
-                        </Typography>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" color="text.secondary">
-                        {formatDate(ticket.created_at)}
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="right" sx={{ position: 'sticky', right: 0, bgcolor: 'white', zIndex: 1 }}>
-                      <IconButton onClick={(e) => handleAssignClick(e, ticket.id)}>
-                        <ListDashIcon />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <DataTable 
+          columns={columns} 
+          data={tickets} 
+          loading={loading} 
+          emptyMessage="No tickets found matching your filters." 
+          minWidth={1000}
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+        />
 
         {/* Action Menu */}
         <Menu
@@ -439,22 +368,25 @@ const AdminTickets: React.FC = () => {
                   <Typography variant="body2" gutterBottom><strong>Priority:</strong> {selectedTicket.priority}</Typography>
                   
                   <FormControl fullWidth sx={{ mt: 3 }}>
-                    <InputLabel id="assign-agent-label">Assign To</InputLabel>
-                    <Select
-                      labelId="assign-agent-label"
-                      value={selectedAgentToAssign}
-                      label="Assign To"
-                      onChange={(e) => setSelectedAgentToAssign(e.target.value)}
-                    >
-                      {agents.map((agent) => (
-                        <MenuItem key={agent.id} value={agent.id}>
-                          {agent.first_name} {agent.last_name}
-                        </MenuItem>
-                      ))}
-                      {agents.length === 0 && (
-                        <MenuItem disabled value="">No agents available</MenuItem>
-                      )}
-                    </Select>
+                    <Autocomplete
+                      options={agents.map(a => ({ id: a.id, name: `${a.first_name} ${a.last_name}` }))}
+                      getOptionLabel={(option) => option.name}
+                      value={agents.find(a => a.id === selectedAgentToAssign) ? { id: selectedAgentToAssign, name: `${agents.find(a => a.id === selectedAgentToAssign)?.first_name} ${agents.find(a => a.id === selectedAgentToAssign)?.last_name}` } : null}
+                      onChange={(_, newValue) => setSelectedAgentToAssign(newValue ? newValue.id : '')}
+                      renderInput={(params) => <TextField {...params} label="Assign To" />}
+                      disabled={agents.length === 0}
+                      slotProps={{
+                        popper: {
+                          placement: 'bottom-start',
+                          modifiers: [
+                            {
+                              name: 'flip',
+                              enabled: false,
+                            },
+                          ],
+                        },
+                      }}
+                    />
                   </FormControl>
                 </Box>
               );
@@ -479,20 +411,8 @@ const AdminTickets: React.FC = () => {
           </DialogActions>
         </Dialog>
 
-        {/* Footer */}
-        {!loading && (
-          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
-            <Typography variant="caption" color="text.secondary">
-              Showing {tickets.length} of {total} tickets
-            </Typography>
-            {agentFilter === 'Unassigned' && (
-              <Typography variant="caption" color="text.secondary">
-                {total} unassigned
-              </Typography>
-            )}
-          </Box>
-        )}
       </Box>
+
     </AdminLayout>
   );
 };

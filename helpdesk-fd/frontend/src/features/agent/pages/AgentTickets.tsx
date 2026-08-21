@@ -1,15 +1,23 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { 
-  Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, 
-  TableHead, TableRow, Chip, Button, InputAdornment, TextField, 
-  Select, MenuItem, CircularProgress, Avatar, IconButton
+  Box, Typography, Button, InputAdornment, TextField, 
+  CircularProgress, Avatar, IconButton, ToggleButtonGroup, ToggleButton
 } from '@mui/material';
-import { Search as SearchIcon, Visibility as VisibilityIcon, Close as CloseIcon } from '@mui/icons-material';
+import { Search as SearchIcon, Visibility as VisibilityIcon, Close as CloseIcon, ViewList as ViewListIcon, ViewKanban as ViewKanbanIcon } from '@mui/icons-material';
 import AgentLayout from '../components/AgentLayout';
+import KanbanBoard from '../components/KanbanBoard';
+import DataTable, { type Column } from '../../../components/DataTable';
+import FilterSelect from '../../../components/FilterSelect';
+import { STATUS_FILTER_OPTIONS, PRIORITY_FILTER_OPTIONS } from '../../../utils/constants';
+import { arrayMove } from '@dnd-kit/sortable';
 import axiosInstance from '../../../utils/axios';
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
 import { useFormik } from 'formik';
+import { useToast } from '../../../context/ToastContext';
+import StatusChip from '../../../components/StatusChip';
+import PriorityChip from '../../../components/PriorityChip';
+import { getInitials } from '../../../utils/ticketHelpers';
 
 interface Ticket {
   id: string;
@@ -28,7 +36,45 @@ interface Ticket {
 const AgentTickets: React.FC = () => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const navigate = useNavigate();
+  const { showToast } = useToast();
+
+  const handleStatusChange = async (ticketId: string, newStatus: string) => {
+    try {
+      await axiosInstance.patch(`/agent/tickets/${ticketId}/status`, { status: newStatus });
+      showToast('Status updated successfully!');
+    } catch (error) {
+      console.error("Failed to update ticket status", error);
+      showToast('Failed to update ticket status', 'error');
+      fetchTickets();
+    }
+  };
+
+  const handleReorder = (activeId: string, overId: string | null, newStatus?: string) => {
+    setTickets((prev) => {
+      const activeIndex = prev.findIndex((t) => t.id === activeId);
+      if (activeIndex === -1) return prev;
+      const activeTicket = prev[activeIndex];
+
+      let newTickets = [...prev];
+
+      if (newStatus && activeTicket.status !== newStatus) {
+        newTickets[activeIndex] = { ...activeTicket, status: newStatus };
+      }
+
+      if (overId) {
+        const overIndex = newTickets.findIndex((t) => t.id === overId);
+        if (overIndex !== -1 && activeIndex !== overIndex) {
+          newTickets = arrayMove(newTickets, activeIndex, overIndex);
+        }
+      }
+
+      return newTickets;
+    });
+  };
 
   const formik = useFormik({
     initialValues: {
@@ -37,6 +83,7 @@ const AgentTickets: React.FC = () => {
       priority: 'All',
     },
     onSubmit: () => {
+      setPage(1);
       fetchTickets();
     },
   });
@@ -48,15 +95,22 @@ const AgentTickets: React.FC = () => {
       if (formik.values.search) params.append('search', formik.values.search);
       if (formik.values.status !== 'All') params.append('status', formik.values.status);
       if (formik.values.priority !== 'All') params.append('priority', formik.values.priority);
+      if (viewMode === 'table') {
+        params.append('page', page.toString());
+        params.append('size', '10');
+      } else {
+        params.append('size', '1000');
+      }
 
       const response = await axiosInstance.get(`/agent/tickets?${params.toString()}`);
-      setTickets(response.data.data);
+      setTickets(response.data.data.tickets);
+      setTotalPages(response.data.data.totalPages);
     } catch (error) {
       console.error("Failed to fetch agent tickets", error);
     } finally {
       setLoading(false);
     }
-  }, [formik.values.search, formik.values.status, formik.values.priority]);
+  }, [formik.values.search, formik.values.status, formik.values.priority, page, viewMode]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -65,28 +119,80 @@ const AgentTickets: React.FC = () => {
     return () => clearTimeout(timer);
   }, [fetchTickets]);
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'open': return '#2196F3';
-      case 'in progress': return '#FF9800';
-      case 'resolved': return '#4CAF50';
-      case 'closed': return '#9E9E9E';
-      default: return '#757575';
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority.toLowerCase()) {
-      case 'high': return '#F44336';
-      case 'medium': return '#FF9800';
-      case 'low': return '#9E9E9E';
-      default: return '#757575';
-    }
-  };
-
   const clearFilters = () => {
     formik.resetForm();
   };
+
+  const columns: Column<Ticket>[] = [
+    {
+      id: 'ticket_number',
+      label: 'TICKET ID',
+      render: (ticket) => (
+        <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+          {ticket.ticket_number}
+        </Typography>
+      )
+    },
+    {
+      id: 'subject',
+      label: 'TITLE',
+      render: (ticket) => (
+        <Box>
+          <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main', mb: 0.5 }}>{ticket.subject}</Typography>
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>{ticket.category}</Typography>
+        </Box>
+      )
+    },
+    {
+      id: 'customer',
+      label: 'CUSTOMER',
+      render: (ticket) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Avatar sx={{ width: 24, height: 24, fontSize: '0.7rem', bgcolor: '#e0e0e0', color: '#000' }}>
+            {getInitials(ticket.customer?.first_name, ticket.customer?.last_name)}
+          </Avatar>
+          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+            {ticket.customer ? `${ticket.customer.first_name} ${ticket.customer.last_name}` : 'Unknown'}
+          </Typography>
+        </Box>
+      )
+    },
+    {
+      id: 'status',
+      label: 'STATUS',
+      render: (ticket) => <StatusChip status={ticket.status} />
+    },
+    {
+      id: 'priority',
+      label: 'PRIORITY',
+      render: (ticket) => <PriorityChip priority={ticket.priority} />
+    },
+    {
+      id: 'created_at',
+      label: 'DATE',
+      render: (ticket) => (
+        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+          {dayjs(ticket.created_at).format('YYYY-MM-DD')}
+        </Typography>
+      )
+    },
+    {
+      id: 'action',
+      label: 'ACTION',
+      align: 'center',
+      render: (ticket) => (
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<VisibilityIcon fontSize="small" />}
+          onClick={() => navigate(`/agent/tickets/${ticket.id}`)}
+          sx={{ textTransform: 'none', borderRadius: 2, color: 'text.secondary', borderColor: '#ddd' }}
+        >
+          View Ticket
+        </Button>
+      )
+    }
+  ];
 
   return (
     <AgentLayout>
@@ -132,148 +238,74 @@ const AgentTickets: React.FC = () => {
 
           {/* Dropdowns - Right Side */}
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <Select
-              name="status"
-              value={formik.values.status}
-              onChange={formik.handleChange}
+            <ToggleButtonGroup
+              value={viewMode}
+              exclusive
+              onChange={(_, newMode) => newMode && setViewMode(newMode)}
               size="small"
-              sx={{ bgcolor: 'white', borderRadius: 2, minWidth: 150 }}
+              sx={{ bgcolor: 'white' }}
             >
-              <MenuItem value="All">All Statuses</MenuItem>
-              <MenuItem value="Open">Open</MenuItem>
-              <MenuItem value="In Progress">In Progress</MenuItem>
-              <MenuItem value="Resolved">Resolved</MenuItem>
-              <MenuItem value="Closed">Closed</MenuItem>
-            </Select>
+              <ToggleButton value="table" aria-label="table view">
+                <ViewListIcon fontSize="small" />
+              </ToggleButton>
+              <ToggleButton value="kanban" aria-label="kanban view">
+                <ViewKanbanIcon fontSize="small" />
+              </ToggleButton>
+            </ToggleButtonGroup>
 
-            <Select
-              name="priority"
+            <FilterSelect
+              value={formik.values.status}
+              onChange={(val) => formik.setFieldValue('status', val)}
+              options={STATUS_FILTER_OPTIONS}
+            />
+
+            <FilterSelect
               value={formik.values.priority}
-              onChange={formik.handleChange}
-              size="small"
-              sx={{ bgcolor: 'white', borderRadius: 2, minWidth: 150 }}
-            >
-              <MenuItem value="All">All Priorities</MenuItem>
-              <MenuItem value="Low">Low</MenuItem>
-              <MenuItem value="Medium">Medium</MenuItem>
-              <MenuItem value="High">High</MenuItem>
-            </Select>
+              onChange={(val) => formik.setFieldValue('priority', val)}
+              options={PRIORITY_FILTER_OPTIONS}
+            />
             
-            <Button 
-              variant="text" 
-              onClick={clearFilters}
-              sx={{ textTransform: 'none', fontWeight: 600, color: 'primary.main' }}
-            >
-              Clear Filters
-            </Button>
+            {(formik.values.search || formik.values.status !== 'All' || formik.values.priority !== 'All') && (
+              <Button 
+                variant="text" 
+                onClick={clearFilters}
+                sx={{ textTransform: 'none', fontWeight: 600, color: 'primary.main' }}
+              >
+                Clear Filters
+              </Button>
+            )}
           </Box>
         </Box>
 
-        {/* Tickets Table */}
-        <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', flexGrow: 1, overflow: 'auto', minHeight: 0 }}>
-          <Table stickyHeader sx={{ minWidth: 900 }}>
-            <TableHead>
-              <TableRow sx={{ '& th': { borderBottom: '1px solid #eee', color: 'text.secondary', fontWeight: 'bold', fontSize: '0.75rem', bgcolor: 'white' } }}>
-                <TableCell>TICKET ID</TableCell>
-                <TableCell>TITLE</TableCell>
-                <TableCell>CUSTOMER</TableCell>
-                <TableCell>STATUS</TableCell>
-                <TableCell>PRIORITY</TableCell>
-                <TableCell>DATE</TableCell>
-                <TableCell align="center">ACTION</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
-                    <CircularProgress />
-                  </TableCell>
-                </TableRow>
-              ) : tickets.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
-                    <Typography color="text.secondary">No tickets found matching your filters.</Typography>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                tickets.map((ticket) => (
-                  <TableRow key={ticket.id} hover sx={{ '& td': { borderBottom: '1px solid #f5f5f5', py: 1.5 } }}>
-                    <TableCell>
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-                        {ticket.ticket_number}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main', mb: 0.5 }}>
-                        {ticket.subject}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                        {ticket.category}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Avatar sx={{ width: 24, height: 24, fontSize: '0.7rem', bgcolor: '#e0e0e0', color: '#000' }}>
-                          {ticket.customer?.first_name?.[0]}{ticket.customer?.last_name?.[0]}
-                        </Avatar>
-                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                          {ticket.customer ? `${ticket.customer.first_name} ${ticket.customer.last_name}` : 'Unknown'}
-                        </Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={ticket.status} 
-                        size="small" 
-                        sx={{ 
-                          bgcolor: `${getStatusColor(ticket.status)}15`, 
-                          color: getStatusColor(ticket.status),
-                          fontWeight: 600,
-                          borderRadius: 1.5,
-                          border: `1px solid ${getStatusColor(ticket.status)}40`
-                        }} 
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: getPriorityColor(ticket.priority) }} />
-                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                          {ticket.priority}
-                        </Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                        {dayjs(ticket.created_at).format('YYYY-MM-DD')}
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="center">
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<VisibilityIcon fontSize="small" />}
-                        onClick={() => navigate(`/agent/tickets/${ticket.id}`)}
-                        sx={{ textTransform: 'none', borderRadius: 2, color: 'text.secondary', borderColor: '#ddd' }}
-                      >
-                        View Ticket
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        
-        {/* Footer */}
-        {!loading && (
-          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-start', flexShrink: 0 }}>
-            <Typography variant="caption" color="text.secondary">
-              Showing {tickets.length} of {tickets.length} tickets
-            </Typography>
+        {/* Content Area */}
+        {viewMode === 'table' ? (
+          <DataTable 
+            columns={columns} 
+            data={tickets} 
+            loading={loading} 
+            emptyMessage="No tickets found matching your filters." 
+            minWidth={900}
+            page={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+          />
+        ) : (
+          <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
+            {loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <KanbanBoard 
+                tickets={tickets} 
+                onStatusChange={handleStatusChange} 
+                onTicketClick={(id) => navigate(`/agent/tickets/${id}`)} 
+                onReorder={handleReorder}
+              />
+            )}
           </Box>
         )}
+        
       </Box>
     </AgentLayout>
   );

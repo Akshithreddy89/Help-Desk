@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, Button, TextField, CircularProgress, Alert, Paper, Chip, ToggleButtonGroup, ToggleButton, InputAdornment, IconButton } from '@mui/material';
+import { Box, Typography, Button, TextField, CircularProgress, Alert, Paper, InputAdornment, IconButton, Pagination } from '@mui/material';
 import { Add as AddIcon, Search as SearchIcon, Close as CloseIcon } from '@mui/icons-material';
 import CustomerLayout from '../components/CustomerLayout';
 import RaiseTicketDialog from '../components/RaiseTicketDialog';
 import axiosInstance from '../../../utils/axios';
 import { useNavigate } from 'react-router-dom';
-import dayjs from 'dayjs';
+import StatusChip from '../../../components/StatusChip';
+import PriorityChip from '../../../components/PriorityChip';
+import { formatDate } from '../../../utils/ticketHelpers';
+import FilterSelect from '../../../components/FilterSelect';
+import { STATUS_FILTER_OPTIONS } from '../../../utils/constants';
 
 interface Ticket {
   id: string;
@@ -23,6 +27,8 @@ const MyTickets: React.FC = () => {
   
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   
   const [isRaiseTicketOpen, setIsRaiseTicketOpen] = useState(false);
   const navigate = useNavigate();
@@ -34,9 +40,17 @@ const MyTickets: React.FC = () => {
         params: {
           search: search || undefined,
           status: statusFilter !== 'All' ? statusFilter : undefined,
+          page,
+          size: 10
         }
       });
-      setTickets(response.data.data);
+      
+      if (Array.isArray(response.data.data)) {
+        setTickets(response.data.data);
+      } else {
+        setTickets(response.data.data.tickets || []);
+        setTotalPages(response.data.data.totalPages || 1);
+      }
       setError(null);
     } catch (err: any) {
       console.error("Failed to fetch tickets", err);
@@ -53,34 +67,11 @@ const MyTickets: React.FC = () => {
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [search, statusFilter]);
+  }, [search, statusFilter, page]);
 
-  const handleStatusChange = (
-    _event: React.MouseEvent<HTMLElement>,
-    newStatus: string | null,
-  ) => {
-    if (newStatus !== null) {
-      setStatusFilter(newStatus);
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Open': return 'primary';
-      case 'In Progress': return 'warning';
-      case 'Resolved': return 'success';
-      case 'Closed': return 'default';
-      default: return 'default';
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'High': return 'error.main';
-      case 'Medium': return 'warning.main';
-      case 'Low': return 'success.main';
-      default: return 'text.secondary';
-    }
+  const handleStatusChange = (value: string) => {
+    setStatusFilter(value);
+    setPage(1);
   };
 
   return (
@@ -120,20 +111,11 @@ const MyTickets: React.FC = () => {
           />
 
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
-            <ToggleButtonGroup
-              color="primary"
+            <FilterSelect
               value={statusFilter}
-              exclusive
               onChange={handleStatusChange}
-              size="small"
-              sx={{ backgroundColor: '#fff' }}
-            >
-              <ToggleButton value="All" sx={{ textTransform: 'none', px: 2 }}>All</ToggleButton>
-              <ToggleButton value="Open" sx={{ textTransform: 'none', px: 2 }}>Open</ToggleButton>
-              <ToggleButton value="In Progress" sx={{ textTransform: 'none', px: 2 }}>In Progress</ToggleButton>
-              <ToggleButton value="Resolved" sx={{ textTransform: 'none', px: 2 }}>Resolved</ToggleButton>
-              <ToggleButton value="Closed" sx={{ textTransform: 'none', px: 2 }}>Closed</ToggleButton>
-            </ToggleButtonGroup>
+              options={STATUS_FILTER_OPTIONS}
+            />
 
             <Button 
               variant="contained" 
@@ -165,15 +147,15 @@ const MyTickets: React.FC = () => {
                   <Box sx={{ flex: 1 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                       <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>{ticket.ticket_number}</Typography>
-                      <Typography variant="caption" sx={{ color: getPriorityColor(ticket.priority), fontWeight: 600 }}>{ticket.priority}</Typography>
+                      <PriorityChip priority={ticket.priority} variant="textOnly" />
                     </Box>
                     <Typography variant="subtitle1" sx={{ fontWeight: 600 }} gutterBottom>{ticket.subject}</Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {dayjs(ticket.created_at).format('D MMM YYYY')}
+                      {formatDate(ticket.created_at)}
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                    <Chip label={ticket.status} color={getStatusColor(ticket.status) as any} size="small" variant="outlined" sx={{ fontWeight: 600, minWidth: 80 }} />
+                    <StatusChip status={ticket.status} sx={{ minWidth: 80 }} />
                     <Button 
                       variant="outlined" 
                       color="inherit" 
@@ -187,6 +169,17 @@ const MyTickets: React.FC = () => {
                 </Paper>
               ))
             )}
+          </Box>
+        )}
+
+        {!loading && totalPages > 1 && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, mb: 2, flexShrink: 0 }}>
+            <Pagination 
+              count={totalPages} 
+              page={page} 
+              onChange={(_, value) => setPage(value)} 
+              color="primary" 
+            />
           </Box>
         )}
 

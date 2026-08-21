@@ -13,7 +13,6 @@ const sendAgentInvitation = async (email, firstName, invitationLink) => {
                 <div style="font-family:Arial;padding:20px">
 
                     <h2>Hello ${firstName},</h2>
-
                     <p>
                         You have been added as an Agent in the HelpDesk System.
                     </p>

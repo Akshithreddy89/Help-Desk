@@ -1,49 +1,10 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { 
-  Box, Typography, Button, CircularProgress, Alert, Paper, 
-  Divider, TextField, Avatar, Select, MenuItem, FormControl, Chip
-} from '@mui/material';
-import { ArrowBackIosNew as ArrowBackIcon, Send as SendIcon } from '@mui/icons-material';
+import React, { useEffect, useState } from 'react';
 import AgentLayout from '../components/AgentLayout';
 import axiosInstance from '../../../utils/axios';
 import { useParams, useNavigate } from 'react-router-dom';
-import dayjs from 'dayjs';
 import { useToast } from '../../../context/ToastContext';
-
-interface TicketComment {
-  id: string;
-  message: string;
-  created_at: string;
-  sender: {
-    first_name: string;
-    last_name: string;
-    role: string;
-  };
-}
-
-interface TicketDetail {
-  id: string;
-  ticket_number: string;
-  subject: string;
-  description: string;
-  category: string;
-  priority: string;
-  status: string;
-  created_at: string;
-  customer?: {
-    id: string;
-    first_name: string;
-    last_name: string;
-    email: string;
-  };
-  assignedAgent?: {
-    id: string;
-    first_name: string;
-    last_name: string;
-    email: string;
-  };
-  comments?: TicketComment[];
-}
+import TicketDetailsView from '../../../components/TicketDetails/TicketDetailsView';
+import type { TicketDetail } from '../../../components/TicketDetails/types';
 
 const AgentTicketDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -56,8 +17,6 @@ const AgentTicketDetails: React.FC = () => {
   const [newComment, setNewComment] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
-  
-  const commentsEndRef = useRef<HTMLDivElement>(null);
 
   const fetchTicketDetails = async () => {
     try {
@@ -77,12 +36,6 @@ const AgentTicketDetails: React.FC = () => {
       fetchTicketDetails();
     }
   }, [id]);
-
-  useEffect(() => {
-    if (commentsEndRef.current) {
-      commentsEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [ticket?.comments]);
 
   const handleStatusChange = async (event: any) => {
     const newStatus = event.target.value;
@@ -117,201 +70,22 @@ const AgentTicketDetails: React.FC = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Open': return 'primary';
-      case 'In Progress': return 'warning';
-      case 'Resolved': return 'success';
-      case 'Closed': return 'default';
-      default: return 'default';
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'High': return 'error.main';
-      case 'Medium': return 'warning.main';
-      case 'Low': return 'success.main';
-      default: return 'text.secondary';
-    }
-  };
-
-  const getInitials = (first: string, last: string) => {
-    return `${first?.[0] || ''}${last?.[0] || ''}`.toUpperCase();
-  };
-
   return (
     <AgentLayout>
-      <Box sx={{ p: 3, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', overflow: 'hidden' }}>
-        <Button 
-          startIcon={<ArrowBackIcon fontSize="small" />}
-          onClick={() => navigate('/agent/my-tickets')}
-          sx={{ mb: 2, textTransform: 'none', color: 'text.secondary', fontWeight: 600, '&:hover': { backgroundColor: 'transparent', color: '#000' }, flexShrink: 0, alignSelf: 'flex-start' }}
-        >
-          Back to My Tickets
-        </Button>
-
-        {error && <Alert severity="error" sx={{ mb: 2, flexShrink: 0 }}>{error}</Alert>}
-
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}>
-            <CircularProgress />
-          </Box>
-        ) : ticket ? (
-          <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-            <Paper sx={{ p: 2, borderRadius: 3, border: '1px solid #eee', boxShadow: 'none', flexShrink: 0, mb: 2 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                <Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 0.5 }}>
-                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>{ticket.ticket_number}</Typography>
-                    <Chip label={ticket.status} color={getStatusColor(ticket.status) as any} size="small" variant="outlined" sx={{ fontWeight: 600, height: 20, fontSize: '0.7rem' }} />
-                    <Typography variant="body2" sx={{ color: getPriorityColor(ticket.priority), fontWeight: 600, fontSize: '0.8rem' }}>{ticket.priority} Priority</Typography>
-                  </Box>
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>{ticket.subject}</Typography>
-                </Box>
-                
-                {/* Agent Status Updater */}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
-                    Status:
-                  </Typography>
-                  <FormControl size="small" disabled={updatingStatus}>
-                    <Select
-                      value={ticket.status}
-                      onChange={handleStatusChange}
-                      sx={{ 
-                        minWidth: 140, 
-                        fontWeight: 600, 
-                        borderRadius: 2,
-                        '& .MuiSelect-select': { py: 0.5, px: 1.5, fontSize: '0.85rem' }
-                      }}
-                    >
-                      <MenuItem value="Open">Open</MenuItem>
-                      <MenuItem value="In Progress">In Progress</MenuItem>
-                      <MenuItem value="Resolved">Resolved</MenuItem>
-                      <MenuItem value="Closed">Closed</MenuItem>
-                    </Select>
-                  </FormControl>
-                  {updatingStatus && <CircularProgress size={18} />}
-                </Box>
-              </Box>
-
-              <Divider sx={{ my: 1.5 }} />
-
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4, mb: 2 }}>
-                <Box sx={{ flex: '1 1 200px' }}>
-                  <Typography variant="caption" color="text.secondary" gutterBottom sx={{ display: 'block', fontWeight: 600, mb: 0 }}>
-                    CUSTOMER
-                  </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    {ticket.customer ? `${ticket.customer.first_name} ${ticket.customer.last_name}` : 'Unknown'}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {ticket.customer?.email}
-                  </Typography>
-                </Box>
-                <Box sx={{ flex: '1 1 200px' }}>
-                  <Typography variant="caption" color="text.secondary" gutterBottom sx={{ display: 'block', fontWeight: 600, mb: 0 }}>
-                    CATEGORY
-                  </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>{ticket.category}</Typography>
-                </Box>
-                <Box sx={{ flex: '1 1 200px' }}>
-                  <Typography variant="caption" color="text.secondary" gutterBottom sx={{ display: 'block', fontWeight: 600, mb: 0 }}>
-                    CREATED ON
-                  </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    {dayjs(ticket.created_at).format('D MMM YYYY, h:mm A')}
-                  </Typography>
-                </Box>
-              </Box>
-
-              <Box sx={{ backgroundColor: '#fafafa', p: 1.5, borderRadius: 2 }}>
-                <Typography variant="caption" color="text.secondary" gutterBottom sx={{ display: 'block', fontWeight: 600, mb: 0 }}>
-                  Description
-                </Typography>
-                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>
-                  {ticket.description}
-                </Typography>
-              </Box>
-            </Paper>
-
-            {/* Conversation / Comments Section */}
-            <Typography variant="h6" sx={{ fontWeight: 600, mb: 1, flexShrink: 0 }}>Conversation</Typography>
-            <Paper sx={{ p: 2, borderRadius: 3, border: '1px solid #eee', boxShadow: 'none', flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              
-              <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', p: 1, mb: 2 }}>
-                {(!ticket.comments || ticket.comments.length === 0) ? (
-                  <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 4 }}>
-                    No messages yet. Start the conversation!
-                  </Typography>
-                ) : (
-                  ticket.comments.map((comment) => {
-                    const isAgent = comment.sender.role === 'AGENT' || comment.sender.role === 'ADMIN';
-                    return (
-                      <Box key={comment.id} sx={{ display: 'flex', gap: 2, flexDirection: isAgent ? 'row-reverse' : 'row' }}>
-                        <Avatar sx={{ bgcolor: isAgent ? 'primary.main' : 'secondary.main', width: 36, height: 36, fontSize: '0.9rem' }}>
-                          {getInitials(comment.sender.first_name, comment.sender.last_name)}
-                        </Avatar>
-                        <Box sx={{ maxWidth: '75%' }}>
-                          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 0.5, flexDirection: isAgent ? 'row-reverse' : 'row' }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                                {comment.sender.first_name} {comment.sender.last_name} {isAgent && '(You)'}
-                              </Typography>
-                              <Box component="span" sx={{ px: 0.75, py: 0.25, bgcolor: '#000', borderRadius: 1, fontSize: '0.65rem', color: '#fff', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                                {comment.sender.role}
-                              </Box>
-                            </Box>
-                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                              {dayjs(comment.created_at).format('MMM D, h:mm A')}
-                            </Typography>
-                          </Box>
-                          <Paper sx={{ p: 2, bgcolor: isAgent ? '#e3f2fd' : '#f5f5f5', borderRadius: 2, boxShadow: 'none' }}>
-                            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                              {comment.message}
-                            </Typography>
-                          </Paper>
-                        </Box>
-                      </Box>
-                    );
-                  })
-                )}
-                <div ref={commentsEndRef} />
-              </Box>
-
-              <Divider sx={{ mb: 2, flexShrink: 0 }} />
-
-              {/* Add Comment Input */}
-              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexShrink: 0 }}>
-                <TextField
-                  fullWidth
-                  multiline
-                  minRows={2}
-                  maxRows={4}
-                  placeholder="Type a message to the customer..."
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  variant="outlined"
-                  sx={{ bgcolor: '#fafafa', '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                />
-                <Button 
-                  variant="contained" 
-                  endIcon={submittingComment ? <CircularProgress size={16} color="inherit" /> : <SendIcon />}
-                  onClick={handleSendComment}
-                  disabled={!newComment.trim() || submittingComment}
-                  sx={{ borderRadius: 2, py: 1.5, px: 3, textTransform: 'none', fontWeight: 600 }}
-                >
-                  Reply
-                </Button>
-              </Box>
-
-            </Paper>
-          </Box>
-        ) : (
-          <Alert severity="warning">Ticket details not found.</Alert>
-        )}
-      </Box>
+      <TicketDetailsView
+        ticket={ticket}
+        role="AGENT"
+        onBack={() => navigate('/agent/my-tickets')}
+        backButtonText="Back to My Tickets"
+        onAddComment={handleSendComment}
+        newComment={newComment}
+        setNewComment={setNewComment}
+        submittingComment={submittingComment}
+        onStatusChange={handleStatusChange}
+        updatingStatus={updatingStatus}
+        loading={loading}
+        error={error}
+      />
     </AgentLayout>
   );
 };

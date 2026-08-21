@@ -1,6 +1,7 @@
 const User = require("../../models/user.model");
 const { Ticket, TicketComment } = require("../../models");
 const { Op } = require("sequelize");
+const { getPagination, getPagingData } = require("../../utils/pagination");
 const { sendTestEmail } = require("../../services/email.service");
 const { v4: uuidv4 } = require("uuid");
 const PasswordResetToken = require("../../models/passwordResetToken.model");
@@ -143,7 +144,8 @@ const createAgent = async (req, res) => {
 
 const getAllAgents = async (req, res) => {
   try {
-    const { search } = req.query;
+    const { search, page, size } = req.query;
+    const { limit, offset } = getPagination(page, size);
 
     const whereClause = {
       role: "AGENT",
@@ -157,8 +159,11 @@ const getAllAgents = async (req, res) => {
       ];
     }
 
-    const agents = await User.findAll({
+    const agents = await User.findAndCountAll({
       where: whereClause,
+      distinct: true,
+      limit,
+      offset,
       attributes: { exclude: ["password"] },
       include: [
         {
@@ -169,7 +174,7 @@ const getAllAgents = async (req, res) => {
       ],
     });
 
-    const formattedAgents = agents.map(agent => {
+    const formattedAgents = agents.rows.map(agent => {
       const agentJson = agent.toJSON();
       const tickets = agentJson.assignedTickets || [];
       
@@ -187,10 +192,12 @@ const getAllAgents = async (req, res) => {
       };
     });
 
+    const response = getPagingData({ count: agents.count, rows: formattedAgents }, page, limit, 'agents');
+
     return res.status(200).json({
       success: true,
       message: "Agents fetched successfully.",
-      data: formattedAgents,
+      data: response,
     });
   } catch (error) {
     console.error(error);
@@ -207,7 +214,8 @@ const getAllAgents = async (req, res) => {
 
 const getAllTickets = async (req, res) => {
   try {
-    const { search, status, priority, agentId } = req.query;
+    const { status, priority, agentId, search, page, size } = req.query;
+    const { limit, offset } = getPagination(page, size);
 
     const whereClause = {};
 
@@ -238,8 +246,11 @@ const getAllTickets = async (req, res) => {
       ];
     }
 
-    const tickets = await Ticket.findAll({
+    const tickets = await Ticket.findAndCountAll({
       where: whereClause,
+      distinct: true,
+      limit,
+      offset,
       include: [
         {
           model: User,
@@ -255,11 +266,12 @@ const getAllTickets = async (req, res) => {
       order: [["created_at", "DESC"]],
     });
 
+    const response = getPagingData(tickets, page, limit, 'tickets');
+
     return res.status(200).json({
       success: true,
       message: "Tickets fetched successfully.",
-      total: tickets.length,
-      data: tickets,
+      data: response,
     });
   } catch (error) {
     console.error("Error fetching all tickets:", error);

@@ -1,5 +1,6 @@
 const { Ticket, User, TicketComment } = require("../../models");
 const { Op } = require("sequelize");
+const { getPagination, getPagingData } = require("../../utils/pagination");
 
 // Generate a random ticket number, e.g., TKT-12345678
 const generateTicketNumber = () => {
@@ -67,7 +68,8 @@ const createTicket = async (req, res) => {
 const getCustomerTickets = async (req, res) => {
   try {
     const customer_id = req.user.id;
-    const { search, status } = req.query;
+    const { search, status, page, size } = req.query;
+    const { limit, offset } = getPagination(page, size);
 
     const whereClause = {
       customer_id,
@@ -94,15 +96,19 @@ const getCustomerTickets = async (req, res) => {
       ];
     }
 
-    const tickets = await Ticket.findAll({
+    const tickets = await Ticket.findAndCountAll({
       where: whereClause,
+      limit,
+      offset,
       order: [["created_at", "DESC"]],
     });
+
+    const response = getPagingData(tickets, page, limit, 'tickets');
 
     return res.status(200).json({
       success: true,
       message: "Tickets fetched successfully.",
-      data: tickets,
+      data: response,
     });
   } catch (error) {
     console.error("Error fetching tickets:", error);

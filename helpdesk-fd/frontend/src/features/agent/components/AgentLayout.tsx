@@ -1,19 +1,27 @@
 import React from 'react';
-import { Box } from '@mui/material';
-import AgentSidebar from './AgentSidebar';
+import { Chip } from '@mui/material';
+import { 
+  DashboardOutlined as DashboardOutlinedIcon,
+  FormatListBulleted as FormatListBulletedIcon
+} from '@mui/icons-material';
+import SharedLayout from '../../../components/Layout/SharedLayout';
 
 interface AgentLayoutProps {
   children: React.ReactNode;
 }
 
 const AgentLayout: React.FC<AgentLayoutProps> = ({ children }) => {
+  const menuItems = [
+    { title: 'Dashboard', icon: <DashboardOutlinedIcon />, path: '/agent/dashboard' },
+    { title: 'My Tickets', icon: <FormatListBulletedIcon />, path: '/agent/my-tickets' },
+  ];
+
+  const agentBadge = <Chip label="PRO" size="small" sx={{ bgcolor: 'white', color: 'black', fontWeight: 'bold', height: 20, fontSize: '0.65rem' }} />;
+
   return (
-    <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
-      <AgentSidebar />
-      <Box sx={{ flexGrow: 1, height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', bgcolor: '#f4f5f7' }}>
-        {children}
-      </Box>
-    </Box>
+    <SharedLayout menuItems={menuItems} headerBadge={agentBadge}>
+      {children}
+    </SharedLayout>
   );
 };
 
