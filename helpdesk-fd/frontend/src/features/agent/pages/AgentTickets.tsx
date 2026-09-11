@@ -148,7 +148,7 @@ const AgentTickets: React.FC = () => {
       label: 'CUSTOMER',
       render: (ticket) => (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Avatar sx={{ width: 24, height: 24, fontSize: '0.7rem', bgcolor: '#e0e0e0', color: '#000' }}>
+          <Avatar sx={{ width: 24, height: 24, fontSize: '0.7rem', bgcolor: 'primary.main', color: '#fff' }}>
             {getInitials(ticket.customer?.first_name, ticket.customer?.last_name)}
           </Avatar>
           <Typography variant="body2" sx={{ fontWeight: 500 }}>

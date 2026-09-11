@@ -152,8 +152,9 @@ const AddAgentDialog: React.FC<AddAgentDialogProps> = ({ open, onClose, onAgentA
           <Button 
             type="submit" 
             variant="contained" 
+            color="primary"
             disabled={formik.isSubmitting}
-            sx={{ bgcolor: '#111318', '&:hover': { bgcolor: '#2c313d' }, borderRadius: 2, px: 3 }}
+            sx={{ borderRadius: 2, px: 3 }}
           >
             {formik.isSubmitting ? 'Creating...' : 'Create Agent'}
           </Button>

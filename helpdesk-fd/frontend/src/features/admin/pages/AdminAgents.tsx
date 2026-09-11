@@ -12,7 +12,7 @@ import AdminLayout from '../components/AdminLayout';
 import AddAgentDialog from '../components/AddAgentDialog';
 import DataTable, { type Column } from '../../../components/DataTable';
 import axiosInstance from '../../../utils/axios';
-import { getInitials, stringToColor, formatDate } from '../../../utils/ticketHelpers';
+import { getInitials, formatDate } from '../../../utils/ticketHelpers';
 
 // Add type for Agent
 interface Agent {
@@ -80,7 +80,7 @@ const AdminAgents: React.FC = () => {
       label: 'AGENT',
       render: (agent) => (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Avatar sx={{ width: 32, height: 32, fontSize: '0.875rem', bgcolor: stringToColor(`${agent.first_name} ${agent.last_name}`), color: 'white', fontWeight: 'bold' }}>
+          <Avatar sx={{ width: 32, height: 32, fontSize: '0.875rem', bgcolor: 'primary.main', color: 'white', fontWeight: 'bold' }}>
             {getInitials(agent.first_name, agent.last_name)}
           </Avatar>
           <Typography variant="body2" sx={{ fontWeight: 500 }}>
@@ -172,9 +172,10 @@ const AdminAgents: React.FC = () => {
           />
           <Button
             variant="contained"
+            color="primary"
             startIcon={<AddIcon />}
             onClick={() => setIsAddDialogOpen(true)}
-            sx={{ bgcolor: '#111318', '&:hover': { bgcolor: '#2c313d' }, borderRadius: 2, px: 3, textTransform: 'none' }}
+            sx={{ borderRadius: 2, px: 3, textTransform: 'none' }}
           >
             Add Agent
           </Button>

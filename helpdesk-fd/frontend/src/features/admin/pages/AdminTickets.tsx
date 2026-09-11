@@ -19,7 +19,7 @@ import FilterSelect from '../../../components/FilterSelect';
 import { STATUS_FILTER_OPTIONS, PRIORITY_FILTER_OPTIONS } from '../../../utils/constants';
 import axiosInstance from '../../../utils/axios';
 import { useNavigate } from 'react-router-dom';
-import { getInitials, stringToColor, formatDate } from '../../../utils/ticketHelpers';
+import { getInitials, formatDate } from '../../../utils/ticketHelpers';
 import StatusChip from '../../../components/StatusChip';
 import PriorityChip from '../../../components/PriorityChip';
 
@@ -196,7 +196,7 @@ const AdminTickets: React.FC = () => {
       label: 'CUSTOMER',
       render: (ticket) => ticket.customer ? (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Avatar sx={{ width: 24, height: 24, fontSize: '0.65rem', bgcolor: '#f5f5f5', color: '#666' }}>
+          <Avatar sx={{ width: 24, height: 24, fontSize: '0.65rem', bgcolor: 'rgba(0,0,0,0.05)', color: 'primary.main', fontWeight: 'bold' }}>
             {getInitials(ticket.customer.first_name, ticket.customer.last_name)}
           </Avatar>
           <Typography variant="body2">{ticket.customer.first_name} {ticket.customer.last_name}</Typography>
@@ -218,7 +218,7 @@ const AdminTickets: React.FC = () => {
       label: 'ASSIGNED TO',
       render: (ticket) => ticket.assignedAgent ? (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Avatar sx={{ width: 24, height: 24, fontSize: '0.65rem', bgcolor: stringToColor(`${ticket.assignedAgent.first_name} ${ticket.assignedAgent.last_name}`), color: 'white', fontWeight: 'bold' }}>
+          <Avatar sx={{ width: 24, height: 24, fontSize: '0.65rem', bgcolor: 'primary.main', color: 'white', fontWeight: 'bold' }}>
             {getInitials(ticket.assignedAgent.first_name, ticket.assignedAgent.last_name)}
           </Avatar>
           <Typography variant="body2">{ticket.assignedAgent.first_name} {ticket.assignedAgent.last_name}</Typography>
@@ -235,7 +235,7 @@ const AdminTickets: React.FC = () => {
       label: 'ACTIONS',
       align: 'right',
       render: (ticket) => (
-        <IconButton onClick={(e) => handleAssignClick(e, ticket.id)}>
+        <IconButton color="primary" onClick={(e) => handleAssignClick(e, ticket.id)}>
           <ListDashIcon />
         </IconButton>
       )

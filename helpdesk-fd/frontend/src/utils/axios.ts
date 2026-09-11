@@ -7,12 +7,13 @@ const axiosInstance = axios.create({
   },
 });
 
-// Interceptor to add auth token
+// Interceptor to add auth token in every http request
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('Token added to request headers:', token);
     }
     return config;
   },

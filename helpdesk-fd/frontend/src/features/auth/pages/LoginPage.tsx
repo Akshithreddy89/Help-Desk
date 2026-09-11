@@ -36,6 +36,7 @@ const LoginPage: React.FC = () => {
         if (response.data.success) {
           localStorage.setItem('token', response.data.token);
           localStorage.setItem('user', JSON.stringify(response.data.user));
+          window.dispatchEvent(new Event('authChange'));
           sessionStorage.setItem('toastMessage', 'Logged in successfully');
           // Redirect to the dashboard provided by backend
           navigate(response.data.dashboard);
@@ -90,7 +91,7 @@ const LoginPage: React.FC = () => {
           </Typography>
           <TextField
             fullWidth
-            id="password"
+            id="password" 
             name="password"
             type={showPassword ? 'text' : 'password'}
             placeholder="••••••••"

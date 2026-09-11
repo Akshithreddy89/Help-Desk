@@ -1,0 +1,49 @@
+/* Custom overrides for FullCalendar */
+
+.fc .fc-toolbar-title {
+  font-size: 1.25rem !important;
+  font-weight: bold;
+}
+
+.fc .fc-button-primary {
+  background-color: #ffffff !important;
+  border-color: #e0e0e0 !important;
+  color: #333333 !important;
+  text-transform: capitalize !important;
+  box-shadow: none !important;
+}
+
+.fc .fc-button-primary:hover {
+  background-color: #f5f5f5 !important;
+}
+
+.fc .fc-button-primary:not(:disabled).fc-button-active, 
+.fc .fc-button-primary:not(:disabled):active {
+  background-color: #e0e0e0 !important;
+  border-color: #ccc !important;
+  color: #000 !important;
+}
+
+.fc-theme-standard td, .fc-theme-standard th {
+  border-color: #f0f0f0 !important;
+}
+
+.fc-daygrid-event {
+  border-radius: 4px !important;
+  padding: 2px !important;
+  margin: 2px 4px !important;
+  cursor: pointer;
+}
+
+.fc-daygrid-day-top {
+  display: flex !important;
+  flex-direction: row !important;
+  width: 100% !important;
+}
+
+.fc-daygrid-day-number {
+  width: 100% !important;
+  display: block !important;
+  padding: 4px !important;
+  text-decoration: none !important;
+}

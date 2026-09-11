@@ -161,7 +161,8 @@ const RaiseTicketDialog: React.FC<RaiseTicketDialogProps> = ({ open, onClose, on
             type="submit" 
             variant="contained" 
             disabled={formik.isSubmitting}
-            sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, backgroundColor: '#000', '&:hover': { backgroundColor: '#333' } }}
+            color="primary"
+            sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
           >
             Submit Ticket
           </Button>

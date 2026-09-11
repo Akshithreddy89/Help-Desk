@@ -88,7 +88,7 @@ const KanbanCard = ({ ticket, onClick, isOverlay = false }: { ticket: Ticket, on
       </Typography>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Avatar sx={{ width: 24, height: 24, fontSize: '0.7rem', bgcolor: '#e0e0e0', color: '#000' }}>
+          <Avatar sx={{ width: 24, height: 24, fontSize: '0.7rem', bgcolor: 'primary.main', color: '#fff' }}>
             {ticket.customer?.first_name?.[0]}{ticket.customer?.last_name?.[0]}
           </Avatar>
         </Box>

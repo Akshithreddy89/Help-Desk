@@ -48,11 +48,11 @@ const TicketDetailsView: React.FC<TicketDetailsViewProps> = ({
   }, [ticket?.comments]);
 
   return (
-    <Box sx={{ p: 3, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', overflow: 'hidden' }}>
+    <Box sx={{ px: 3, pb: 3, pt: 1, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', overflow: 'hidden' }}>
       <Button 
         startIcon={<ArrowBackIcon fontSize="small" />}
         onClick={onBack}
-        sx={{ mb: 2, textTransform: 'none', color: 'text.secondary', fontWeight: 600, '&:hover': { backgroundColor: 'transparent', color: '#000' }, flexShrink: 0, alignSelf: 'flex-start' }}
+        sx={{ mb: 2, textTransform: 'none', color: 'text.secondary', fontWeight: 600, '&:hover': { backgroundColor: 'transparent', color: 'primary.main' }, flexShrink: 0, alignSelf: 'flex-start' }}
       >
         {backButtonText}
       </Button>
@@ -176,7 +176,7 @@ const TicketDetailsView: React.FC<TicketDetailsViewProps> = ({
 
           {/* Conversation / Comments Section */}
           <Typography variant="h6" sx={{ fontWeight: 600, mb: 1, flexShrink: 0 }}>Conversation</Typography>
-          <Paper sx={{ p: 2, borderRadius: 3, border: '1px solid #eee', boxShadow: 'none', flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <Paper sx={{ p: 2, borderRadius: 3, border: '1px solid #eee', boxShadow: 'none', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             
             <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', p: 1, mb: 2 }}>
               {(!ticket.comments || ticket.comments.length === 0) ? (
@@ -205,7 +205,7 @@ const TicketDetailsView: React.FC<TicketDetailsViewProps> = ({
                             <Typography variant="caption" sx={{ fontWeight: 600 }}>
                               {comment.sender.first_name} {comment.sender.last_name} {isCurrentUser && '(You)'}
                             </Typography>
-                            <Box component="span" sx={{ px: 0.75, py: 0.25, bgcolor: '#000', borderRadius: 1, fontSize: '0.65rem', color: '#fff', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                            <Box component="span" sx={{ px: 0.75, py: 0.25, bgcolor: 'primary.main', borderRadius: 1, fontSize: '0.65rem', color: '#fff', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                               {comment.sender.role}
                             </Box>
                           </Box>

@@ -48,13 +48,13 @@ const LogoutDialog: React.FC<LogoutDialogProps> = ({ open, onClose, onConfirm })
             width: 88, 
             height: 88, 
             borderRadius: '50%', 
-            backgroundColor: 'error.main', 
+            backgroundColor: 'primary.main', 
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center',
             mb: 3,
             color: 'white',
-            boxShadow: '0 8px 24px rgba(211, 47, 47, 0.4)'
+            boxShadow: 3
           }}
         >
           <LogoutIcon sx={{ fontSize: 44, ml: 0.5 }} />
@@ -91,7 +91,7 @@ const LogoutDialog: React.FC<LogoutDialogProps> = ({ open, onClose, onConfirm })
         <Button 
           onClick={onConfirm} 
           variant="contained" 
-          color="error" 
+          color="primary" 
           size="large" 
           autoFocus
           sx={{ 
@@ -101,9 +101,9 @@ const LogoutDialog: React.FC<LogoutDialogProps> = ({ open, onClose, onConfirm })
             fontWeight: 600,
             fontSize: '1.05rem',
             py: 1.2,
-            boxShadow: '0 6px 16px rgba(211, 47, 47, 0.3)',
+            boxShadow: 2,
             '&:hover': {
-              boxShadow: '0 8px 20px rgba(211, 47, 47, 0.5)',
+              boxShadow: 4,
             }
           }}
         >

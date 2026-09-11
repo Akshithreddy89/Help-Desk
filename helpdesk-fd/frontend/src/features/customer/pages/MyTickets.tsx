@@ -121,7 +121,8 @@ const MyTickets: React.FC = () => {
               variant="contained" 
               startIcon={<AddIcon />}
               onClick={() => setIsRaiseTicketOpen(true)}
-              sx={{ backgroundColor: '#000', color: '#fff', '&:hover': { backgroundColor: '#333' }, textTransform: 'none', borderRadius: 2, px: 3, py: 1 }}
+              color="primary"
+              sx={{ textTransform: 'none', borderRadius: 2, px: 3, py: 1 }}
             >
               Raise Ticket
             </Button>

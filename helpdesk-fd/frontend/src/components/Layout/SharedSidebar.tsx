@@ -36,6 +36,7 @@ const SharedSidebar: React.FC<SharedSidebarProps> = ({ menuItems, headerBadge, c
   const handleConfirmLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    window.dispatchEvent(new Event('authChange'));
     sessionStorage.setItem('toastMessage', 'Logged out successfully');
     setLogoutDialogOpen(false);
     navigate('/login');
@@ -49,7 +50,7 @@ const SharedSidebar: React.FC<SharedSidebarProps> = ({ menuItems, headerBadge, c
         width: expanded ? DRAWER_WIDTH_EXPANDED : DRAWER_WIDTH_COLLAPSED,
         flexShrink: 0,
         height: '100vh',
-        bgcolor: '#111318',
+        bgcolor: 'primary.main',
         color: 'white',
         display: 'flex',
         flexDirection: 'column',
@@ -101,14 +102,14 @@ const SharedSidebar: React.FC<SharedSidebarProps> = ({ menuItems, headerBadge, c
                     minWidth: 0,
                     mr: expanded ? 2 : 'auto',
                     justifyContent: 'center',
-                    color: active ? 'white' : '#aaa',
+                    color: active ? 'white' : 'rgba(255, 255, 255, 0.8)',
                   }}
                 >
                   {item.icon}
                 </ListItemIcon>
                 <ListItemText 
                   primary={
-                    <Typography sx={{ fontWeight: active ? 'bold' : 'normal', fontSize: '0.9rem', color: active ? 'white' : '#aaa' }}>
+                    <Typography sx={{ fontWeight: active ? 'bold' : 'normal', fontSize: '0.9rem', color: active ? 'white' : 'rgba(255, 255, 255, 0.8)' }}>
                       {item.title}
                     </Typography>
                   }
@@ -144,13 +145,13 @@ const SharedSidebar: React.FC<SharedSidebarProps> = ({ menuItems, headerBadge, c
                 minWidth: 0,
                 mr: expanded ? 2 : 'auto',
                 justifyContent: 'center',
-                color: '#aaa',
+                color: 'rgba(255, 255, 255, 0.8)',
               }}
             >
               <LogoutOutlinedIcon />
             </ListItemIcon>
             <ListItemText 
-              primary={<Typography sx={{ fontSize: '0.9rem', color: '#aaa' }}>Logout</Typography>} 
+              primary={<Typography sx={{ fontSize: '0.9rem', color: 'rgba(255, 255, 255, 0.8)' }}>Logout</Typography>} 
               sx={{
                 opacity: expanded ? 1 : 0,
                 display: expanded ? 'block' : 'none',

@@ -7,6 +7,7 @@ const agentController = require("./agent.controller");
 const authMiddleware = require("../../middleware/authmiddleware");
 const authorizeRoles = require("../../middleware/authorizeRoles");
 
+
 // Get tickets assigned to the authenticated agent
 router.get(
   "/tickets",
