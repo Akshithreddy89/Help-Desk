@@ -14,10 +14,13 @@
     "dialect": "postgres"
   },
   "production": {
-    "username": "postgres",
-    "password": "12345",
-    "database": "helpdesk_db",
-    "host": "localhost",
-    "dialect": "postgres"
+    "use_env_variable": "DATABASE_URL",
+    "dialect": "postgres",
+    "dialectOptions": {
+      "ssl": {
+        "require": true,
+        "rejectUnauthorized": false
+      }
+    }
   }
 }
