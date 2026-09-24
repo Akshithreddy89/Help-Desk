@@ -27,8 +27,8 @@ async function startServer() {
       });
     }, 30 * 1000);
 
-    app.listen(PORT, () => {
-      console.log(`Server Running On Port http://localhost:${PORT}`);
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server Running On Port ${PORT}`);
     });
   } catch (error) {
     console.log("Database Connection Failed");
