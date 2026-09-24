@@ -7,8 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "migrate": "sequelize-cli db:migrate",
-    "seed": "sequelize-cli db:seed:all"
+    "migrate": "npx sequelize-cli db:migrate",
+    "seed": "npx sequelize-cli db:seed:all"
   },
   "keywords": [],
   "author": "",
@@ -27,10 +27,10 @@
     "pg-hstore": "^2.3.4",
     "resend": "^6.18.1",
     "sequelize": "^6.37.8",
+    "sequelize-cli": "^6.6.5",
     "uuid": "^14.0.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14",
-    "sequelize-cli": "^6.6.5"
+    "nodemon": "^3.1.14"
   }
 }
