@@ -13,6 +13,8 @@ const agentSlotRoutes = require("./features/agent-scheduling/routes/agentSlot.ro
 const meetingLinkRoutes = require("./features/agent-scheduling/routes/meetingLink.routes");
 const publicScheduleRoutes = require("./features/agent-scheduling/routes/publicSchedule.routes");
 const calendarRoutes = require("./features/agent-scheduling/routes/calendar.routes");
+const aiAssistantRoutes = require("./features/users/ai-assistant/routes/ai.routes");
+
 
 const app = express();
 
@@ -33,6 +35,8 @@ app.use("/api/agent/slots", agentSlotRoutes);
 app.use("/api/agent", meetingLinkRoutes);
 app.use("/api/public", publicScheduleRoutes);
 app.use("/api/agent", calendarRoutes);
+app.use("/api/ai-assistant", aiAssistantRoutes);
+
 
 app.get("/", (req, res) => {
   res.json({
