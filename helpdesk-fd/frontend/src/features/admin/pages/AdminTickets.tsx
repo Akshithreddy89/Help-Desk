@@ -8,7 +8,7 @@ import {
 import {
   Search as SearchIcon,
   PersonAddAlt as AssignIcon,
-  FormatListBulleted as ListDashIcon,
+  MoreVert as MoreVertIcon,
   Visibility as ViewIcon,
   Close as CloseIcon
 } from '@mui/icons-material';
@@ -52,6 +52,7 @@ const AdminTickets: React.FC = () => {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const navigate = useNavigate();
 
@@ -80,7 +81,7 @@ const AdminTickets: React.FC = () => {
           priority: priorityFilter,
           agentId: agentFilter,
           page,
-          size: 10
+          size: pageSize
         }
       });
       if (response.data.success) {
@@ -92,7 +93,7 @@ const AdminTickets: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, statusFilter, priorityFilter, agentFilter, page]);
+  }, [searchTerm, statusFilter, priorityFilter, agentFilter, page, pageSize]);
 
   const fetchAgents = async () => {
     try {
@@ -235,8 +236,8 @@ const AdminTickets: React.FC = () => {
       label: 'ACTIONS',
       align: 'right',
       render: (ticket) => (
-        <IconButton color="primary" onClick={(e) => handleAssignClick(e, ticket.id)}>
-          <ListDashIcon />
+        <IconButton onClick={(e) => handleAssignClick(e, ticket.id)}>
+          <MoreVertIcon />
         </IconButton>
       )
     }
@@ -330,6 +331,11 @@ const AdminTickets: React.FC = () => {
           page={page}
           totalPages={totalPages}
           onPageChange={setPage}
+          size={pageSize}
+          onSizeChange={(newSize) => {
+            setPageSize(newSize);
+            setPage(1);
+          }}
         />
 
         {/* Action Menu */}

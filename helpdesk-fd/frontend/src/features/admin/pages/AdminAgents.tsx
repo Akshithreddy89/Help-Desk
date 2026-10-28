@@ -34,6 +34,7 @@ const AdminAgents: React.FC = () => {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
 
   const fetchAgents = async () => {
@@ -42,7 +43,7 @@ const AdminAgents: React.FC = () => {
       const params = new URLSearchParams();
       if (searchTerm) params.append('search', searchTerm);
       params.append('page', page.toString());
-      params.append('size', '10');
+      params.append('size', pageSize.toString());
       
       const response = await axiosInstance.get(`/admin/agents?${params.toString()}`);
       if (response.data.success) {
@@ -63,7 +64,7 @@ const AdminAgents: React.FC = () => {
 
     return () => clearTimeout(delayDebounceFn);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, page]);
+  }, [searchTerm, page, pageSize]);
 
   // Reset page to 1 when search term changes
   useEffect(() => {
@@ -190,6 +191,11 @@ const AdminAgents: React.FC = () => {
           page={page}
           totalPages={totalPages}
           onPageChange={setPage}
+          size={pageSize}
+          onSizeChange={(newSize) => {
+            setPageSize(newSize);
+            setPage(1);
+          }}
         />
         
 

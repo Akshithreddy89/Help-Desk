@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, Button, TextField, CircularProgress, Alert, Paper, InputAdornment, IconButton, Pagination } from '@mui/material';
+import { Box, Typography, Button, TextField, CircularProgress, Alert, Paper, InputAdornment, IconButton, Pagination, Autocomplete } from '@mui/material';
 import { Add as AddIcon, Search as SearchIcon, Close as CloseIcon } from '@mui/icons-material';
 import CustomerLayout from '../components/CustomerLayout';
 import RaiseTicketDialog from '../components/RaiseTicketDialog';
@@ -28,6 +28,7 @@ const MyTickets: React.FC = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   
   const [isRaiseTicketOpen, setIsRaiseTicketOpen] = useState(false);
@@ -41,7 +42,7 @@ const MyTickets: React.FC = () => {
           search: search || undefined,
           status: statusFilter !== 'All' ? statusFilter : undefined,
           page,
-          size: 10
+          size: pageSize
         }
       });
       
@@ -67,7 +68,7 @@ const MyTickets: React.FC = () => {
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [search, statusFilter, page]);
+  }, [search, statusFilter, page, pageSize]);
 
   const handleStatusChange = (value: string) => {
     setStatusFilter(value);
@@ -173,14 +174,42 @@ const MyTickets: React.FC = () => {
           </Box>
         )}
 
-        {!loading && totalPages > 1 && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, mb: 2, flexShrink: 0 }}>
-            <Pagination 
-              count={totalPages} 
-              page={page} 
-              onChange={(_, value) => setPage(value)} 
-              color="primary" 
-            />
+        {!loading && (totalPages > 1 || tickets.length > 0) && (
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 3, mb: 2, flexShrink: 0, px: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="body2" color="text.secondary">Rows per page:</Typography>
+              <Autocomplete
+                freeSolo
+                options={['5', '10', '15', '20']}
+                value={pageSize.toString()}
+                onChange={(_, newValue) => {
+                  const newSize = parseInt(newValue || '10', 10);
+                  if (!isNaN(newSize) && newSize > 0) {
+                    setPageSize(newSize);
+                    setPage(1);
+                  }
+                }}
+                onInputChange={(_, newInputValue) => {
+                  const newSize = parseInt(newInputValue, 10);
+                  if (!isNaN(newSize) && newSize > 0) {
+                    setPageSize(newSize);
+                    setPage(1);
+                  }
+                }}
+                disableClearable
+                renderInput={(params) => (
+                  <TextField {...params} variant="outlined" size="small" sx={{ width: 80, '& .MuiInputBase-root': { fontSize: '0.875rem', backgroundColor: '#fff' } }} />
+                )}
+              />
+            </Box>
+            {totalPages > 1 && (
+              <Pagination 
+                count={totalPages} 
+                page={page} 
+                onChange={(_, value) => setPage(value)} 
+                color="primary" 
+              />
+            )}
           </Box>
         )}
 

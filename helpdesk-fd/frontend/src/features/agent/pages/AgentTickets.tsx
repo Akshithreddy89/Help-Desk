@@ -38,6 +38,7 @@ const AgentTickets: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -97,7 +98,7 @@ const AgentTickets: React.FC = () => {
       if (formik.values.priority !== 'All') params.append('priority', formik.values.priority);
       if (viewMode === 'table') {
         params.append('page', page.toString());
-        params.append('size', '10');
+        params.append('size', pageSize.toString());
       } else {
         params.append('size', '1000');
       }
@@ -110,7 +111,7 @@ const AgentTickets: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [formik.values.search, formik.values.status, formik.values.priority, page, viewMode]);
+  }, [formik.values.search, formik.values.status, formik.values.priority, page, pageSize, viewMode]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -181,15 +182,13 @@ const AgentTickets: React.FC = () => {
       label: 'ACTION',
       align: 'center',
       render: (ticket) => (
-        <Button
-          variant="outlined"
+        <IconButton
           size="small"
-          startIcon={<VisibilityIcon fontSize="small" />}
           onClick={() => navigate(`/agent/tickets/${ticket.id}`)}
-          sx={{ textTransform: 'none', borderRadius: 2, color: 'text.secondary', borderColor: '#ddd' }}
+          sx={{ color: 'text.secondary' }}
         >
-          View Ticket
-        </Button>
+          <VisibilityIcon fontSize="small" />
+        </IconButton>
       )
     }
   ];
@@ -288,6 +287,11 @@ const AgentTickets: React.FC = () => {
             page={page}
             totalPages={totalPages}
             onPageChange={setPage}
+            size={pageSize}
+            onSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setPage(1);
+            }}
           />
         ) : (
           <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>

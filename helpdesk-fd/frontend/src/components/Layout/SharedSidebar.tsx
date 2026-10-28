@@ -24,7 +24,7 @@ export interface SharedSidebarProps {
 }
 
 const SharedSidebar: React.FC<SharedSidebarProps> = ({ menuItems, headerBadge, collapseIconType = 'menu' }) => {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -46,6 +46,8 @@ const SharedSidebar: React.FC<SharedSidebarProps> = ({ menuItems, headerBadge, c
 
   return (
     <Box
+      onMouseEnter={() => setExpanded(true)}
+      onMouseLeave={() => setExpanded(false)}
       sx={{
         width: expanded ? DRAWER_WIDTH_EXPANDED : DRAWER_WIDTH_COLLAPSED,
         flexShrink: 0,

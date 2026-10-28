@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Paper, CircularProgress, Typography, Box, Pagination
+  Paper, CircularProgress, Typography, Box, Pagination, Autocomplete, TextField
 } from '@mui/material';
 
 export interface Column<T> {
@@ -22,6 +22,8 @@ interface DataTableProps<T> {
   totalPages?: number;
   onPageChange?: (page: number) => void;
   showPagination?: boolean;
+  size?: number;
+  onSizeChange?: (size: number) => void;
 }
 
 export function DataTable<T extends { id: string | number }>({
@@ -33,7 +35,9 @@ export function DataTable<T extends { id: string | number }>({
   page = 1,
   totalPages = 1,
   onPageChange,
-  showPagination = true
+  showPagination = true,
+  size = 10,
+  onSizeChange
 }: DataTableProps<T>) {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1, minHeight: 0, overflow: 'hidden' }}>
@@ -78,14 +82,45 @@ export function DataTable<T extends { id: string | number }>({
       </TableContainer>
 
       {/* Pagination Footer */}
-      {!loading && showPagination && totalPages > 1 && onPageChange && (
-        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', alignItems: 'center', flexShrink: 0 }}>
-          <Pagination 
-            count={totalPages} 
-            page={page} 
-            onChange={(_, value) => onPageChange(value)} 
-            color="primary" 
-          />
+      {!loading && showPagination && (totalPages > 1 || onSizeChange) && (
+        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, px: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            {onSizeChange && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="body2" color="text.secondary">Rows per page:</Typography>
+                <Autocomplete
+                  freeSolo
+                  options={['5', '10', '15', '20']}
+                  value={size.toString()}
+                  onChange={(_, newValue) => {
+                    const newSize = parseInt(newValue || '10', 10);
+                    if (!isNaN(newSize) && newSize > 0) {
+                      onSizeChange(newSize);
+                    }
+                  }}
+                  onInputChange={(_, newInputValue) => {
+                    const newSize = parseInt(newInputValue, 10);
+                    if (!isNaN(newSize) && newSize > 0) {
+                      onSizeChange(newSize);
+                    }
+                  }}
+                  disableClearable
+                  renderInput={(params) => (
+                    <TextField {...params} variant="outlined" size="small" sx={{ width: 80, '& .MuiInputBase-root': { fontSize: '0.875rem' } }} />
+                  )}
+                />
+              </Box>
+            )}
+          </Box>
+          
+          {totalPages > 1 && onPageChange && (
+            <Pagination 
+              count={totalPages} 
+              page={page} 
+              onChange={(_, value) => onPageChange(value)} 
+              color="primary" 
+            />
+          )}
         </Box>
       )}
     </Box>
