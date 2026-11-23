@@ -1,90 +1,72 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import AgentLayout from '../components/AgentLayout';
-import axiosInstance from '../../../utils/axios';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useToast } from '../../../context/ToastContext';
 import TicketDetailsView from '../../../components/TicketDetails/TicketDetailsView';
-import type { TicketDetail } from '../../../components/TicketDetails/types';
+import { 
+  useAgentTicketDetails, 
+  useUpdateTicketStatus, 
+  useAddAgentTicketComment 
+} from '../hooks/useAgentTickets';
 
 const AgentTicketDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { showToast } = useToast();
   
-  const [ticket, setTicket] = useState<TicketDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [newComment, setNewComment] = useState('');
-  const [submittingComment, setSubmittingComment] = useState(false);
-  const [updatingStatus, setUpdatingStatus] = useState(false);
 
-  const fetchTicketDetails = async () => {
-    try {
-      const response = await axiosInstance.get(`/agent/tickets/${id}`);
-      setTicket(response.data.data);
-      setError(null);
-    } catch (err: any) {
-      console.error("Failed to fetch ticket details", err);
-      setError('Failed to load ticket details. Please try again later.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // React Query hook for single ticket details with automatic caching
+  const { data: ticket, isLoading, error } = useAgentTicketDetails(id);
 
-  useEffect(() => {
-    if (id) {
-      fetchTicketDetails();
-    }
-  }, [id]);
+  // Mutation hooks
+  const updateStatusMutation = useUpdateTicketStatus();
+  const addCommentMutation = useAddAgentTicketComment();
 
   const handleStatusChange = async (event: any) => {
     const newStatus = event.target.value;
-    setUpdatingStatus(true);
+    if (!id) return;
     try {
-      await axiosInstance.patch(`/agent/tickets/${id}/status`, { status: newStatus });
-      setTicket(prev => prev ? { ...prev, status: newStatus } : null);
+      await updateStatusMutation.mutateAsync({ ticketId: id, status: newStatus });
       showToast('Ticket status updated successfully', 'success');
     } catch (err: any) {
       console.error("Failed to update status", err);
-      alert('Failed to update status.');
-    } finally {
-      setUpdatingStatus(false);
+      showToast(err?.response?.data?.message || 'Failed to update status.', 'error');
     }
   };
 
   const handleSendComment = async () => {
-    if (!newComment.trim()) return;
-    setSubmittingComment(true);
+    if (!newComment.trim() || !id) return;
     try {
-      await axiosInstance.post('/comments', {
+      await addCommentMutation.mutateAsync({
         ticket_id: id,
-        message: newComment
+        message: newComment.trim(),
       });
       setNewComment('');
-      fetchTicketDetails();
+      showToast('Comment posted successfully', 'success');
     } catch (err: any) {
       console.error("Failed to add comment", err);
-      alert('Failed to add comment.');
-    } finally {
-      setSubmittingComment(false);
+      showToast(err?.response?.data?.message || 'Failed to add comment.', 'error');
     }
   };
+
+  const errorMessage = error instanceof Error ? error.message : error ? 'Failed to load ticket details. Please try again later.' : null;
 
   return (
     <AgentLayout>
       <TicketDetailsView
-        ticket={ticket}
+        ticket={ticket || null}
         role="AGENT"
         onBack={() => navigate('/agent/my-tickets')}
         backButtonText="Back to My Tickets"
         onAddComment={handleSendComment}
         newComment={newComment}
         setNewComment={setNewComment}
-        submittingComment={submittingComment}
+        submittingComment={addCommentMutation.isPending}
         onStatusChange={handleStatusChange}
-        updatingStatus={updatingStatus}
-        loading={loading}
-        error={error}
+        updatingStatus={updateStatusMutation.isPending}
+        loading={isLoading}
+        error={errorMessage}
       />
     </AgentLayout>
   );

@@ -3,12 +3,13 @@ import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, B
 import { Close as CloseIcon } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
-import axiosInstance from '../../../utils/axios';
+import { useChangePassword } from '../hooks/useCustomerProfile';
+import { useToast } from '../../../context/ToastContext';
 
 interface SetPasswordDialogProps {
   open: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess?: () => void;
 }
 
 const validationSchema = yup.object({
@@ -28,6 +29,8 @@ const validationSchema = yup.object({
 
 const SetPasswordDialog: React.FC<SetPasswordDialogProps> = ({ open, onClose, onSuccess }) => {
   const [error, setError] = useState<string | null>(null);
+  const { showToast } = useToast();
+  const changePasswordMutation = useChangePassword();
 
   const formik = useFormik({
     initialValues: {
@@ -39,12 +42,11 @@ const SetPasswordDialog: React.FC<SetPasswordDialogProps> = ({ open, onClose, on
     onSubmit: async (values, { setSubmitting, resetForm }) => {
       setError(null);
       try {
-        const response = await axiosInstance.post('/customer/change-password', values);
-        if (response.data.success) {
-          resetForm();
-          onSuccess();
-          onClose();
-        }
+        await changePasswordMutation.mutateAsync(values);
+        resetForm();
+        showToast('Password updated successfully!');
+        onSuccess?.();
+        onClose();
       } catch (err: any) {
         setError(err.response?.data?.message || 'Failed to update password');
       } finally {
@@ -132,10 +134,10 @@ const SetPasswordDialog: React.FC<SetPasswordDialogProps> = ({ open, onClose, on
           <Button
             type="submit"
             variant="contained"
-            disabled={formik.isSubmitting}
+            disabled={formik.isSubmitting || changePasswordMutation.isPending}
             sx={{ fontWeight: 'bold', textTransform: 'none', borderRadius: 2 }}
           >
-            {formik.isSubmitting ? 'Saving...' : 'Save'}
+            {changePasswordMutation.isPending ? 'Saving...' : 'Save'}
           </Button>
         </DialogActions>
       </form>

@@ -6,13 +6,13 @@ import {
 import { Close as CloseIcon } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
-import axiosInstance from '../../../utils/axios';
 import { useToast } from '../../../context/ToastContext';
+import { useCreateAgent } from '../hooks/useAdminAgents';
 
 interface AddAgentDialogProps {
   open: boolean;
   onClose: () => void;
-  onAgentAdded: () => void;
+  onAgentAdded?: () => void;
 }
 
 const validationSchema = yup.object({
@@ -25,6 +25,7 @@ const validationSchema = yup.object({
 const AddAgentDialog: React.FC<AddAgentDialogProps> = ({ open, onClose, onAgentAdded }) => {
   const [error, setError] = useState<string | null>(null);
   const { showToast } = useToast();
+  const createAgentMutation = useCreateAgent();
 
   const formik = useFormik({
     initialValues: {
@@ -37,13 +38,11 @@ const AddAgentDialog: React.FC<AddAgentDialogProps> = ({ open, onClose, onAgentA
     onSubmit: async (values, { setSubmitting, resetForm }) => {
       setError(null);
       try {
-        const response = await axiosInstance.post('/admin/agents', values);
-        if (response.data.success) {
-          showToast('Agent added successfully', 'success');
-          resetForm();
-          onAgentAdded();
-          onClose();
-        }
+        await createAgentMutation.mutateAsync(values);
+        showToast('Agent added successfully', 'success');
+        resetForm();
+        onAgentAdded?.();
+        onClose();
       } catch (err: any) {
         setError(err.response?.data?.message || 'Failed to create agent');
       } finally {
@@ -57,6 +56,8 @@ const AddAgentDialog: React.FC<AddAgentDialogProps> = ({ open, onClose, onAgentA
     setError(null);
     onClose();
   };
+
+  const isSubmitting = formik.isSubmitting || createAgentMutation.isPending;
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
@@ -153,10 +154,10 @@ const AddAgentDialog: React.FC<AddAgentDialogProps> = ({ open, onClose, onAgentA
             type="submit" 
             variant="contained" 
             color="primary"
-            disabled={formik.isSubmitting}
+            disabled={isSubmitting}
             sx={{ borderRadius: 2, px: 3 }}
           >
-            {formik.isSubmitting ? 'Creating...' : 'Create Agent'}
+            {isSubmitting ? 'Creating...' : 'Create Agent'}
           </Button>
         </DialogActions>
       </form>

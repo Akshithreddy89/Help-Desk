@@ -1,7 +1,9 @@
+const axios = require("axios");
 const { Ticket, User, TicketComment, sequelize } = require("../../../../models");
 const { Op } = require("sequelize");
-const { FAQ_TOPICS, findFaqMatch } = require("../faq.knowledge");
 const aiService = require("../services/ai.service");
+
+const PYTHON_RAG_URL = process.env.PYTHON_RAG_URL || "http://127.0.0.1:8000";
 
 // Helper to generate unique ticket numbers (e.g. TKT-12345678)
 const generateTicketNumber = () => {
@@ -96,62 +98,77 @@ const getTicketStatusByName = async (req, res) => {
 };
 
 /**
- * 3. FAQ Query Handler (verified FAQ match with Gemini fallback)
+ * 3. FAQ Query Handler (routed to Python FastAPI RAG Service)
  */
 const chatFaq = async (req, res) => {
   try {
-    const { query, topicId } = req.body;
-    // Fast-path: Explicit topic requested
-    if (topicId) {
-      const topic = FAQ_TOPICS.find((t) => t.id === topicId);
-      if (topic) {
-        return res.status(200).json({
-          success: true,
-          data: {
-            title: topic.title,
-            answer: topic.solution,
-            suggestedAction: "check_resolution",
-          },
-        });
-      }
-    }
-    if (typeof query !== "string" || !query.trim()) {
+    const question = req.body.question || req.body.query || req.body.topicId;
+    if (!question || typeof question !== "string" || !question.trim()) {
       return res.status(400).json({
         success: false,
-        message: "Query is required.",
+        message: "Question is required.",
       });
     }
 
-    const matchedTopic = findFaqMatch(query);
-    if (matchedTopic) {
-      return res.status(200).json({
-        success: true,
-        data: {
-          title: matchedTopic.title,
-          answer: matchedTopic.solution,
-          suggestedAction: "check_resolution",
+    const cleanedQuestion = question.trim();
+
+    // Call Python FastAPI RAG Service using Axios
+    const response = await axios.post(
+      `${PYTHON_RAG_URL}/internal/rag/chat`,
+      { question: cleanedQuestion },
+      {
+        headers: {
+          "Content-Type": "application/json",
         },
-      });
-    }
+        timeout: 15000,
+      }
+    );
 
-    const allKnowledge = FAQ_TOPICS.map((t) => `Topic: ${t.title}\n${t.solution}`).join("\n\n");
-    const aiAnswer = await aiService.answerFaqConversation(query.trim(), allKnowledge);
+    const ragData = response.data;
+    const cleanedAnswer = (ragData.answer || "")
+      .replace(/\s*\[[^\]]*?(?:\.pdf|\.docx|\.txt|\bpage\s*\d+)[^\]]*?\]/gi, "")
+      .replace(/\s+([.,;:!?])/g, "$1");
+
     return res.status(200).json({
       success: true,
       data: {
         title: "Support Advice",
-        answer: aiAnswer,
+        answer: cleanedAnswer,
+        sources: ragData.sources || [],
         suggestedAction: "check_resolution",
       },
     });
   } catch (error) {
-    console.error("Error processing FAQ chat:", error);
-    const isGeminiUnavailable = error.statusCode === 503;
-    return res.status(isGeminiUnavailable ? 503 : 500).json({
+    console.error("Error processing FAQ chat with RAG service:", error.message || error);
+
+    // Python RAG service responded with an HTTP error status (4xx, 5xx)
+    if (error.response) {
+      const status = error.response.status;
+      const errorData = error.response.data;
+      console.error(`Python RAG service error (${status}):`, errorData);
+      return res.status(status >= 500 ? 503 : status).json({
+        success: false,
+        message: "The helpdesk assistant is currently unavailable. Please try again shortly.",
+      });
+    }
+
+    // Network error, timeout, or service unreachable
+    if (
+      error.code === "ECONNABORTED" || // Axios timeout
+      error.code === "ECONNREFUSED" ||
+      error.code === "ETIMEDOUT" ||
+      error.cause?.code === "ECONNREFUSED" ||
+      error.cause?.code === "ETIMEDOUT"
+    ) {
+      return res.status(503).json({
+        success: false,
+        message: "The helpdesk assistant is currently unavailable. Please try again shortly.",
+      });
+    }
+
+    return res.status(500).json({
       success: false,
-      message: isGeminiUnavailable
-        ? "The AI assistant is temporarily unavailable. Please try again shortly."
-        : "Failed to answer FAQ query.",
+      message: "Failed to answer FAQ query.",
     });
   }
 };

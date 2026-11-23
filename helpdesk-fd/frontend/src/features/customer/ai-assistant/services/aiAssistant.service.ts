@@ -1,6 +1,6 @@
 import axios from 'axios';
 import axiosInstance from '../../../../utils/axios';
-import type { CreatedTicket, RecentTicket, TicketDraft, TicketStatusResult } from '../types';
+import type { ChatSource, CreatedTicket, RecentTicket, TicketDraft, TicketStatusResult } from '../types';
 
 const BASE = '/ai-assistant';
 
@@ -40,9 +40,9 @@ export async function getTicketStatusByName(
 }
 
 export async function chatFaq(
-  payload: { query?: string; topicId?: string },
+  payload: { question?: string; query?: string; topicId?: string },
   signal?: AbortSignal,
-): Promise<{ title: string; answer: string }> {
+): Promise<{ title?: string; answer: string; sources?: ChatSource[] }> {
   try {
     const response = await axiosInstance.post(`${BASE}/faq-chat`, payload, { signal });
     return response.data.data;

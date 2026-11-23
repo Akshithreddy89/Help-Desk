@@ -20,10 +20,11 @@ const authMiddleware = async (req, res, next) => {
         message: "No token provided, authorization denied",
       });
     }
-
+   
+    // verify the jwt token and if valid returns payload object automatically, which the payload contains id,email,role when creating in auth.controller using jwt.sign
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Find user to ensure they still exist and are active
+    // Find user in db by using primarykey to ensure they still exist and are active  
     const user = await User.findByPk(decoded.id);
 
     if (!user) {

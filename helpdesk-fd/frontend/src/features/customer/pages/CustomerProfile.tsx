@@ -1,57 +1,28 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Box, Typography, Button, CircularProgress, Alert, Paper, Avatar, Grid } from '@mui/material';
 import CustomerLayout from '../components/CustomerLayout';
-import axiosInstance from '../../../utils/axios';
 import EditProfileDialog from '../components/EditProfileDialog';
 import SetPasswordDialog from '../components/SetPasswordDialog';
-import { useToast } from '../../../context/ToastContext';
-
-interface ProfileData {
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone_number: string;
-  role: string;
-}
+import { useCustomerProfile } from '../hooks/useCustomerProfile';
 
 const CustomerProfile: React.FC = () => {
-  const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
-  
-  const { showToast } = useToast();
 
-  const fetchProfile = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await axiosInstance.get('/customer/profile');
-      if (response.data.success) {
-        setProfile(response.data.data);
-      }
-    } catch (err: any) {
-      setError('Failed to load profile data.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // React Query hook for customer profile caching & automatic invalidation
+  const { data: profile, isLoading, error } = useCustomerProfile();
 
-  useEffect(() => {
-    fetchProfile();
-  }, []);
+  const errorMessage = error instanceof Error ? error.message : error ? 'Failed to load profile data.' : null;
 
   return (
     <CustomerLayout>
       <Box sx={{ p: 3, width: '100%', boxSizing: 'border-box' }}>
-        {loading ? (
+        {isLoading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
             <CircularProgress />
           </Box>
-        ) : error ? (
-          <Alert severity="error">{error}</Alert>
+        ) : errorMessage ? (
+          <Alert severity="error">{errorMessage}</Alert>
         ) : profile ? (
           <Paper sx={{ p: 4, borderRadius: 3, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
             
@@ -126,10 +97,6 @@ const CustomerProfile: React.FC = () => {
         <EditProfileDialog
           open={editDialogOpen}
           onClose={() => setEditDialogOpen(false)}
-          onSuccess={() => {
-            fetchProfile();
-            showToast('Profile updated successfully!');
-          }}
           initialData={{
             first_name: profile.first_name,
             last_name: profile.last_name,
@@ -142,9 +109,6 @@ const CustomerProfile: React.FC = () => {
       <SetPasswordDialog
         open={passwordDialogOpen}
         onClose={() => setPasswordDialogOpen(false)}
-        onSuccess={() => {
-          showToast('Password updated successfully!');
-        }}
       />
       
     </CustomerLayout>
