@@ -3,13 +3,13 @@ import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, B
 import { Close as CloseIcon } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
-import axiosInstance from '../../../utils/axios';
 import { useToast } from '../../../context/ToastContext';
+import { useCreateTicket } from '../hooks/useCustomerTickets';
 
 interface RaiseTicketDialogProps {
   open: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess?: () => void;
 }
 
 const validationSchema = yup.object({
@@ -22,6 +22,7 @@ const validationSchema = yup.object({
 const RaiseTicketDialog: React.FC<RaiseTicketDialogProps> = ({ open, onClose, onSuccess }) => {
   const [apiError, setApiError] = useState<string | null>(null);
   const { showToast } = useToast();
+  const createTicketMutation = useCreateTicket();
 
   const formik = useFormik({
     initialValues: {
@@ -34,10 +35,10 @@ const RaiseTicketDialog: React.FC<RaiseTicketDialogProps> = ({ open, onClose, on
     onSubmit: async (values, { setSubmitting, resetForm }) => {
       setApiError(null);
       try {
-        await axiosInstance.post('/tickets', values);
+        await createTicketMutation.mutateAsync(values);
         showToast('Ticket raised successfully', 'success');
         resetForm();
-        onSuccess();
+        onSuccess?.();
         onClose();
       } catch (error: any) {
         console.error("Failed to raise ticket", error);
@@ -160,11 +161,11 @@ const RaiseTicketDialog: React.FC<RaiseTicketDialogProps> = ({ open, onClose, on
           <Button 
             type="submit" 
             variant="contained" 
-            disabled={formik.isSubmitting}
+            disabled={formik.isSubmitting || createTicketMutation.isPending}
             color="primary"
             sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
           >
-            Submit Ticket
+            {createTicketMutation.isPending ? 'Submitting...' : 'Submit Ticket'}
           </Button>
         </DialogActions>
       </form>

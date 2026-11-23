@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Box, Typography, Button, TextField, InputAdornment, 
-  Avatar, IconButton
+  Avatar, IconButton, Alert
 } from '@mui/material';
 import { 
   Search as SearchIcon,
@@ -11,71 +11,44 @@ import {
 import AdminLayout from '../components/AdminLayout';
 import AddAgentDialog from '../components/AddAgentDialog';
 import DataTable, { type Column } from '../../../components/DataTable';
-import axiosInstance from '../../../utils/axios';
 import { getInitials, formatDate } from '../../../utils/ticketHelpers';
-
-// Add type for Agent
-interface Agent {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone_number: string;
-  created_at: string;
-  account_status: string;
-  total_tickets?: number;
-  open_tickets?: number;
-  resolved_closed_tickets?: number;
-}
+import { useAdminAgents } from '../hooks/useAdminAgents';
+import type { AdminAgentItem } from '../services/adminAgent.service';
 
 const AdminAgents: React.FC = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [totalPages, setTotalPages] = useState(1);
 
-  const fetchAgents = async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (searchTerm) params.append('search', searchTerm);
-      params.append('page', page.toString());
-      params.append('size', pageSize.toString());
-      
-      const response = await axiosInstance.get(`/admin/agents?${params.toString()}`);
-      if (response.data.success) {
-        setAgents(response.data.data.agents);
-        setTotalPages(response.data.data.totalPages);
-      }
-    } catch (error) {
-      console.error('Failed to fetch agents', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Debounce search input by 400ms to avoid unnecessary network queries
   useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      fetchAgents();
-    }, 500); // 500ms delay
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setPage(1);
+    }, 400);
 
-    return () => clearTimeout(delayDebounceFn);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, page, pageSize]);
-
-  // Reset page to 1 when search term changes
-  useEffect(() => {
-    setPage(1);
+    return () => clearTimeout(timer);
   }, [searchTerm]);
 
+  // React Query hook for agents list with automatic caching and smooth pagination
+  const {
+    data: agentsData,
+    isLoading,
+    isPlaceholderData,
+    error,
+  } = useAdminAgents({
+    search: debouncedSearch,
+    page,
+    size: pageSize,
+  });
 
+  const agents = agentsData?.agents || [];
+  const totalPages = agentsData?.totalPages || 1;
+  const errorMessage = error instanceof Error ? error.message : error ? 'Failed to load agents.' : null;
 
-
-
-  const columns: Column<Agent>[] = [
+  const columns: Column<AdminAgentItem>[] = [
     {
       id: 'agent',
       label: 'AGENT',
@@ -147,6 +120,12 @@ const AdminAgents: React.FC = () => {
           </Typography>
         </Box>
 
+        {errorMessage && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {errorMessage}
+          </Alert>
+        )}
+
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3, flexShrink: 0 }}>
           <TextField
             placeholder="Search agents..."
@@ -185,7 +164,7 @@ const AdminAgents: React.FC = () => {
         <DataTable 
           columns={columns} 
           data={agents} 
-          loading={loading} 
+          loading={isLoading && !isPlaceholderData} 
           emptyMessage='No agents found. Click "Add Agent" to create one.' 
           minWidth={900}
           page={page}
@@ -197,16 +176,12 @@ const AdminAgents: React.FC = () => {
             setPage(1);
           }}
         />
-        
 
       </Box>
 
       <AddAgentDialog 
         open={isAddDialogOpen} 
         onClose={() => setIsAddDialogOpen(false)} 
-        onAgentAdded={() => {
-          fetchAgents();
-        }}
       />
     </AdminLayout>
   );

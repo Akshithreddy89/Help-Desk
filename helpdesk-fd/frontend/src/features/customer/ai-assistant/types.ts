@@ -43,6 +43,12 @@ export interface CreatedTicket {
   created_at: string;
 }
 
+export interface ChatSource {
+  document: string;
+  section?: string | null;
+  page_number?: number | null;
+}
+
 export interface ChatMessage {
   id: string;
   role: 'assistant' | 'user';
@@ -52,6 +58,7 @@ export interface ChatMessage {
   ticketResults?: TicketStatusResult[];
   draft?: TicketDraft;
   createdTicket?: CreatedTicket;
+  sources?: ChatSource[];
 }
 
 export interface FaqTopicOption {

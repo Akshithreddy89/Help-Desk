@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, TextField, InputAdornment, MenuItem,
   Avatar, Button, Menu, IconButton,
   Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText,
-  FormControl, Autocomplete
+  FormControl, Autocomplete, Alert
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -17,50 +17,23 @@ import AdminLayout from '../components/AdminLayout';
 import DataTable, { type Column } from '../../../components/DataTable';
 import FilterSelect from '../../../components/FilterSelect';
 import { STATUS_FILTER_OPTIONS, PRIORITY_FILTER_OPTIONS } from '../../../utils/constants';
-import axiosInstance from '../../../utils/axios';
 import { useNavigate } from 'react-router-dom';
 import { getInitials, formatDate } from '../../../utils/ticketHelpers';
 import StatusChip from '../../../components/StatusChip';
 import PriorityChip from '../../../components/PriorityChip';
-
-interface User {
-  first_name: string;
-  last_name: string;
-  email: string;
-}
-
-interface Ticket {
-  id: string;
-  ticket_number: string;
-  subject: string;
-  category: string;
-  status: string;
-  priority: string;
-  created_at: string;
-  customer?: User;
-  assignedAgent?: User;
-}
-
-interface Agent {
-  id: string;
-  first_name: string;
-  last_name: string;
-}
+import { useAdminTickets, useAssignTicket } from '../hooks/useAdminTickets';
+import { useAdminAgentOptions } from '../hooks/useAdminAgents';
+import type { AdminTicketItem } from '../services/adminTicket.service';
 
 const AdminTickets: React.FC = () => {
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [totalPages, setTotalPages] = useState(1);
-  const navigate = useNavigate();
-
-  // Filters
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [priorityFilter, setPriorityFilter] = useState('All');
   const [agentFilter, setAgentFilter] = useState('All');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const navigate = useNavigate();
 
   // Assign Menu State
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -71,59 +44,55 @@ const AdminTickets: React.FC = () => {
 
   const { showToast } = useToast();
 
-  const fetchTickets = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await axiosInstance.get('/admin/tickets', {
-        params: {
-          search: searchTerm,
-          status: statusFilter,
-          priority: priorityFilter,
-          agentId: agentFilter,
-          page,
-          size: pageSize
-        }
-      });
-      if (response.data.success) {
-        setTickets(response.data.data.tickets);
-        setTotalPages(response.data.data.totalPages);
-      }
-    } catch (error) {
-      console.error('Failed to fetch tickets', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [searchTerm, statusFilter, priorityFilter, agentFilter, page, pageSize]);
+  // Debounce search input by 400ms to avoid unnecessary network queries
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setPage(1);
+    }, 400);
 
-  const fetchAgents = async () => {
-    try {
-      const response = await axiosInstance.get('/admin/agents', { params: { size: 1000 } });
-      if (response.data.success) {
-        // Handle paginated response for agents
-        const agentsData = Array.isArray(response.data.data) ? response.data.data : response.data.data.agents;
-        setAgents(agentsData || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch agents', error);
-    }
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // React Query hook for tickets list with automatic caching and smooth pagination
+  const {
+    data: ticketsData,
+    isLoading,
+    isPlaceholderData,
+    error,
+  } = useAdminTickets({
+    search: debouncedSearch,
+    status: statusFilter,
+    priority: priorityFilter,
+    agentId: agentFilter,
+    page,
+    size: pageSize,
+  });
+
+  // Cached agent options for dropdown selection
+  const { data: agents = [] } = useAdminAgentOptions();
+
+  // Mutation hook for assigning tickets
+  const assignTicketMutation = useAssignTicket();
+
+  const tickets = ticketsData?.tickets || [];
+  const totalPages = ticketsData?.totalPages || 1;
+  const errorMessage = error instanceof Error ? error.message : error ? 'Failed to load tickets.' : null;
+
+  const handleStatusChange = (value: string) => {
+    setStatusFilter(value);
+    setPage(1);
   };
 
-  useEffect(() => {
-    fetchAgents();
-  }, []);
-
-  useEffect(() => {
-    // Debounce search slightly
-    const delay = setTimeout(() => {
-      fetchTickets();
-    }, 300);
-    return () => clearTimeout(delay);
-  }, [fetchTickets]);
-
-  // Reset page to 1 when filters change
-  useEffect(() => {
+  const handlePriorityChange = (value: string) => {
+    setPriorityFilter(value);
     setPage(1);
-  }, [searchTerm, statusFilter, priorityFilter, agentFilter]);
+  };
+
+  const handleAgentChange = (value: string) => {
+    setAgentFilter(value);
+    setPage(1);
+  };
 
   const handleAssignClick = (event: React.MouseEvent<HTMLButtonElement>, ticketId: string) => {
     setAnchorEl(event.currentTarget);
@@ -155,15 +124,14 @@ const AdminTickets: React.FC = () => {
   const handleConfirmAssign = async () => {
     if (!selectedTicketId || !selectedAgentToAssign) return;
     try {
-      const response = await axiosInstance.patch(`/admin/tickets/${selectedTicketId}/assign`, {
-        agent_id: selectedAgentToAssign
+      await assignTicketMutation.mutateAsync({
+        ticketId: selectedTicketId,
+        agentId: selectedAgentToAssign,
       });
-      if (response.data.success) {
-        showToast('Ticket assigned successfully!');
-        fetchTickets(); // Refresh list after assignment
-      }
-    } catch (error) {
-      console.error('Failed to assign ticket', error);
+      showToast('Ticket assigned successfully!', 'success');
+    } catch (err: any) {
+      console.error('Failed to assign ticket', err);
+      showToast(err?.response?.data?.message || 'Failed to assign ticket', 'error');
     } finally {
       handleCloseConfirmDialog();
       handleCloseAssignDialog();
@@ -172,7 +140,7 @@ const AdminTickets: React.FC = () => {
     }
   };
 
-  const columns: Column<Ticket>[] = [
+  const columns: Column<AdminTicketItem>[] = [
     {
       id: 'ticket_number',
       label: 'TICKET NUMBER',
@@ -257,6 +225,12 @@ const AdminTickets: React.FC = () => {
           </Typography>
         </Box>
 
+        {errorMessage && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {errorMessage}
+          </Alert>
+        )}
+
         {/* Filters Row */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexShrink: 0 }}>
           {/* Search Bar - Left Side */}
@@ -288,13 +262,13 @@ const AdminTickets: React.FC = () => {
           <Box sx={{ display: 'flex', gap: 2 }}>
             <FilterSelect
               value={statusFilter}
-              onChange={setStatusFilter}
+              onChange={handleStatusChange}
               options={STATUS_FILTER_OPTIONS}
             />
 
             <FilterSelect
               value={priorityFilter}
-              onChange={setPriorityFilter}
+              onChange={handlePriorityChange}
               options={PRIORITY_FILTER_OPTIONS}
             />
 
@@ -307,7 +281,7 @@ const AdminTickets: React.FC = () => {
                 agents.find(a => a.id === agentFilter) ? { id: agentFilter, name: `${agents.find(a => a.id === agentFilter)?.first_name} ${agents.find(a => a.id === agentFilter)?.last_name}` } :
                 { id: 'All', name: 'All Agents' }
               }
-              onChange={(_, newValue) => setAgentFilter(newValue ? newValue.id : 'All')}
+              onChange={(_, newValue) => handleAgentChange(newValue ? newValue.id : 'All')}
               size="small"
               disableClearable
               slotProps={{
@@ -325,7 +299,7 @@ const AdminTickets: React.FC = () => {
         <DataTable 
           columns={columns} 
           data={tickets} 
-          loading={loading} 
+          loading={isLoading && !isPlaceholderData} 
           emptyMessage="No tickets found matching your filters." 
           minWidth={1000}
           page={page}
@@ -400,7 +374,13 @@ const AdminTickets: React.FC = () => {
           </DialogContent>
           <DialogActions sx={{ p: 2 }}>
             <Button onClick={handleCloseAssignDialog} color="inherit">Cancel</Button>
-            <Button onClick={handleOpenConfirmDialog} variant="contained" disabled={!selectedAgentToAssign}>Assign</Button>
+            <Button 
+              onClick={handleOpenConfirmDialog} 
+              variant="contained" 
+              disabled={!selectedAgentToAssign || assignTicketMutation.isPending}
+            >
+              Assign
+            </Button>
           </DialogActions>
         </Dialog>
 
@@ -413,7 +393,14 @@ const AdminTickets: React.FC = () => {
           </DialogContent>
           <DialogActions sx={{ justifyContent: 'center', pb: 3 }}>
             <Button onClick={handleCloseConfirmDialog} color="inherit" sx={{ mr: 2 }}>Cancel</Button>
-            <Button onClick={handleConfirmAssign} variant="contained" color="primary">OK</Button>
+            <Button 
+              onClick={handleConfirmAssign} 
+              variant="contained" 
+              color="primary"
+              disabled={assignTicketMutation.isPending}
+            >
+              {assignTicketMutation.isPending ? 'Assigning...' : 'OK'}
+            </Button>
           </DialogActions>
         </Dialog>
 

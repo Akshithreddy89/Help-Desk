@@ -1,61 +1,92 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Box, Typography, Button, InputAdornment, TextField, 
-  CircularProgress, Avatar, IconButton, ToggleButtonGroup, ToggleButton
+  CircularProgress, Avatar, IconButton, ToggleButtonGroup, ToggleButton, Alert
 } from '@mui/material';
-import { Search as SearchIcon, Visibility as VisibilityIcon, Close as CloseIcon, ViewList as ViewListIcon, ViewKanban as ViewKanbanIcon } from '@mui/icons-material';
+import { 
+  Search as SearchIcon, 
+  Visibility as VisibilityIcon, 
+  Close as CloseIcon, 
+  ViewList as ViewListIcon, 
+  ViewKanban as ViewKanbanIcon 
+} from '@mui/icons-material';
 import AgentLayout from '../components/AgentLayout';
 import KanbanBoard from '../components/KanbanBoard';
 import DataTable, { type Column } from '../../../components/DataTable';
 import FilterSelect from '../../../components/FilterSelect';
 import { STATUS_FILTER_OPTIONS, PRIORITY_FILTER_OPTIONS } from '../../../utils/constants';
 import { arrayMove } from '@dnd-kit/sortable';
-import axiosInstance from '../../../utils/axios';
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
-import { useFormik } from 'formik';
 import { useToast } from '../../../context/ToastContext';
 import StatusChip from '../../../components/StatusChip';
 import PriorityChip from '../../../components/PriorityChip';
 import { getInitials } from '../../../utils/ticketHelpers';
-
-interface Ticket {
-  id: string;
-  ticket_number: string;
-  subject: string;
-  category: string;
-  status: string;
-  priority: string;
-  created_at: string;
-  customer?: {
-    first_name: string;
-    last_name: string;
-  };
-}
+import { useAgentTickets, useUpdateTicketStatus } from '../hooks/useAgentTickets';
+import type { AgentTicketItem } from '../services/agentTicket.service';
 
 const AgentTickets: React.FC = () => {
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [priorityFilter, setPriorityFilter] = useState('All');
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [totalPages, setTotalPages] = useState(1);
+  const [localTickets, setLocalTickets] = useState<AgentTicketItem[]>([]);
+  
   const navigate = useNavigate();
   const { showToast } = useToast();
 
+  // Debounce search input by 400ms to avoid unnecessary network queries
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setPage(1);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // React Query hook for agent tickets
+  const {
+    data: ticketsData,
+    isLoading,
+    isPlaceholderData,
+    error,
+  } = useAgentTickets({
+    search: debouncedSearch,
+    status: statusFilter,
+    priority: priorityFilter,
+    page: viewMode === 'table' ? page : 1,
+    size: viewMode === 'table' ? pageSize : 1000,
+  });
+
+  const updateTicketStatusMutation = useUpdateTicketStatus();
+
+  const tickets = ticketsData?.tickets || [];
+  const totalPages = ticketsData?.totalPages || 1;
+  const errorMessage = error instanceof Error ? error.message : error ? 'Failed to load tickets.' : null;
+
+  // Keep localTickets in sync with React Query cached data for smooth Kanban dragging
+  useEffect(() => {
+    if (ticketsData?.tickets) {
+      setLocalTickets(ticketsData.tickets);
+    }
+  }, [ticketsData?.tickets]);
+
   const handleStatusChange = async (ticketId: string, newStatus: string) => {
     try {
-      await axiosInstance.patch(`/agent/tickets/${ticketId}/status`, { status: newStatus });
-      showToast('Status updated successfully!');
-    } catch (error) {
-      console.error("Failed to update ticket status", error);
-      showToast('Failed to update ticket status', 'error');
-      fetchTickets();
+      await updateTicketStatusMutation.mutateAsync({ ticketId, status: newStatus });
+      showToast('Status updated successfully!', 'success');
+    } catch (err: any) {
+      console.error("Failed to update ticket status", err);
+      showToast(err?.response?.data?.message || 'Failed to update ticket status', 'error');
     }
   };
 
   const handleReorder = (activeId: string, overId: string | null, newStatus?: string) => {
-    setTickets((prev) => {
+    setLocalTickets((prev) => {
       const activeIndex = prev.findIndex((t) => t.id === activeId);
       if (activeIndex === -1) return prev;
       const activeTicket = prev[activeIndex];
@@ -77,54 +108,14 @@ const AgentTickets: React.FC = () => {
     });
   };
 
-  const formik = useFormik({
-    initialValues: {
-      search: '',
-      status: 'All',
-      priority: 'All',
-    },
-    onSubmit: () => {
-      setPage(1);
-      fetchTickets();
-    },
-  });
-
-  const fetchTickets = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (formik.values.search) params.append('search', formik.values.search);
-      if (formik.values.status !== 'All') params.append('status', formik.values.status);
-      if (formik.values.priority !== 'All') params.append('priority', formik.values.priority);
-      if (viewMode === 'table') {
-        params.append('page', page.toString());
-        params.append('size', pageSize.toString());
-      } else {
-        params.append('size', '1000');
-      }
-
-      const response = await axiosInstance.get(`/agent/tickets?${params.toString()}`);
-      setTickets(response.data.data.tickets);
-      setTotalPages(response.data.data.totalPages);
-    } catch (error) {
-      console.error("Failed to fetch agent tickets", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [formik.values.search, formik.values.status, formik.values.priority, page, pageSize, viewMode]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchTickets();
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [fetchTickets]);
-
   const clearFilters = () => {
-    formik.resetForm();
+    setSearchTerm('');
+    setStatusFilter('All');
+    setPriorityFilter('All');
+    setPage(1);
   };
 
-  const columns: Column<Ticket>[] = [
+  const columns: Column<AgentTicketItem>[] = [
     {
       id: 'ticket_number',
       label: 'TICKET ID',
@@ -207,15 +198,20 @@ const AgentTickets: React.FC = () => {
           </Typography>
         </Box>
 
+        {errorMessage && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {errorMessage}
+          </Alert>
+        )}
+
         {/* Filters Row */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexShrink: 0 }}>
           {/* Search Bar - Left Side */}
           <TextField
             placeholder="Search tickets, ID, customer..."
             size="small"
-            name="search"
-            value={formik.values.search}
-            onChange={formik.handleChange}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             sx={{ bgcolor: 'white', borderRadius: 2, minWidth: 320 }}
             slotProps={{
               input: {
@@ -224,9 +220,9 @@ const AgentTickets: React.FC = () => {
                     <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
                   </InputAdornment>
                 ),
-                endAdornment: formik.values.search ? (
+                endAdornment: searchTerm ? (
                   <InputAdornment position="end">
-                    <IconButton size="small" onClick={() => formik.setFieldValue('search', '')} edge="end">
+                    <IconButton size="small" onClick={() => setSearchTerm('')} edge="end">
                       <CloseIcon fontSize="small" />
                     </IconButton>
                   </InputAdornment>
@@ -235,7 +231,7 @@ const AgentTickets: React.FC = () => {
             }}
           />
 
-          {/* Dropdowns - Right Side */}
+          {/* Controls - Right Side */}
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
             <ToggleButtonGroup
               value={viewMode}
@@ -253,18 +249,24 @@ const AgentTickets: React.FC = () => {
             </ToggleButtonGroup>
 
             <FilterSelect
-              value={formik.values.status}
-              onChange={(val) => formik.setFieldValue('status', val)}
+              value={statusFilter}
+              onChange={(val) => {
+                setStatusFilter(val);
+                setPage(1);
+              }}
               options={STATUS_FILTER_OPTIONS}
             />
 
             <FilterSelect
-              value={formik.values.priority}
-              onChange={(val) => formik.setFieldValue('priority', val)}
+              value={priorityFilter}
+              onChange={(val) => {
+                setPriorityFilter(val);
+                setPage(1);
+              }}
               options={PRIORITY_FILTER_OPTIONS}
             />
             
-            {(formik.values.search || formik.values.status !== 'All' || formik.values.priority !== 'All') && (
+            {(searchTerm || statusFilter !== 'All' || priorityFilter !== 'All') && (
               <Button 
                 variant="text" 
                 onClick={clearFilters}
@@ -281,7 +283,7 @@ const AgentTickets: React.FC = () => {
           <DataTable 
             columns={columns} 
             data={tickets} 
-            loading={loading} 
+            loading={isLoading && !isPlaceholderData} 
             emptyMessage="No tickets found matching your filters." 
             minWidth={900}
             page={page}
@@ -295,13 +297,13 @@ const AgentTickets: React.FC = () => {
           />
         ) : (
           <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
-            {loading ? (
+            {isLoading && localTickets.length === 0 ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                 <CircularProgress />
               </Box>
             ) : (
               <KanbanBoard 
-                tickets={tickets} 
+                tickets={localTickets} 
                 onStatusChange={handleStatusChange} 
                 onTicketClick={(id) => navigate(`/agent/tickets/${id}`)} 
                 onReorder={handleReorder}

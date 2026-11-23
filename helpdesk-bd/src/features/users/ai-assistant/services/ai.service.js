@@ -95,50 +95,8 @@ Customer Problem:
   }
 }
 
-
-/**
- * Answers customer FAQ and general IT questions using Gemini.
- */
-async function answerFaqConversation(userQuery, knowledgeContext) {
-  if (!aiClient) {
-    throw new GeminiServiceError("GEMINI_API_KEY is not configured.");
-  }
-
-  const systemInstruction = `You are an intelligent IT Helpdesk AI Assistant.
-Your goal is to provide accurate, helpful IT support to customers.
-
-Instructions:
-1. Reference FAQ Priority: If the customer's question relates to topics in the Company FAQ Knowledge Base (e.g. company Wi-Fi, login/password, booking appointments, billing, or ticket lifecycle), prioritize and follow those official guidelines.
-2. General IT Troubleshooting: If the question is NOT in the Reference FAQ (e.g. general operating system issues, software glitches, browser problems, hardware, or network troubleshooting), use your broader IT knowledge to provide practical, step-by-step guidance.
-3. Style: Keep your answer direct, professional, and formatted in clear, easy-to-follow bullet points.
-4. Support Ticket Recommendation: If the issue requires internal administrative rights, personal account access, or cannot be resolved with troubleshooting, politely advise the customer to raise a support ticket.
-5. Boundaries: Never invent company-specific internal policies or financial commitments outside the knowledge base.`;
-
-  const contents = `Customer Question:\n${userQuery}\n\nCompany FAQ Knowledge Base (use if relevant):\n${knowledgeContext}`;
-
-  try {
-    const response = await aiClient.models.generateContent({
-      model: "gemini-3.5-flash-lite",
-      contents,
-      config: {
-        systemInstruction,
-        maxOutputTokens: 500,
-        temperature: 0.3,
-      },
-    });
-
-    const answer = response.text?.trim();
-    if (!answer) {
-      throw new Error("Empty response received from Gemini.");
-    }
-    return answer;
-  } catch (error) {
-    console.error("Gemini FAQ Chat failed:", error.message || error);
-    throw new GeminiServiceError("AI Assistant is currently unavailable.", error);
-  }
-}
-
 module.exports = {
-    classifyIssue,
-  answerFaqConversation,
+  classifyIssue,
+  fallbackClassifier,
 };
+

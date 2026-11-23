@@ -3,6 +3,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ToastProvider } from './context/ToastContext';
 import { CustomThemeProvider } from './theme/ThemeContext';
 import FullScreenLoader from './components/loader/FullScreenLoader';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { queryClient } from './lib/queryClient';
 
 // Lazy-loaded page components (loaded only on-demand when visiting the route)
 const LoginPage = lazy(() => import('./features/auth/pages/LoginPage'));
@@ -46,11 +49,12 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode,
 
 function App() {
   return (
-    <CustomThemeProvider>
-      <Router>
-        <ToastProvider>
-          <Suspense fallback={<FullScreenLoader />}>
-            <Routes>
+    <QueryClientProvider client={queryClient}>
+      <CustomThemeProvider>
+        <Router>
+          <ToastProvider>
+            <Suspense fallback={<FullScreenLoader />}>
+              <Routes>
             <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/set-password" element={<SetPasswordPage />} />
@@ -170,6 +174,8 @@ function App() {
         </ToastProvider>
       </Router>
     </CustomThemeProvider>
+    <ReactQueryDevtools initialIsOpen={false} />
+  </QueryClientProvider>
   );
 }
 

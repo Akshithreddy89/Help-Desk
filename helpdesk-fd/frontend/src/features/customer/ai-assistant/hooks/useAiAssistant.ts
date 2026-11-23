@@ -129,6 +129,10 @@ export function useAiAssistant() {
     }
   }, [push, startOver]);
 
+
+
+  //1 ticket status
+
   const lookupTicket = useCallback(async (name: string) => {
     const trimmed = name.trim();
     if (!trimmed) return;
@@ -167,22 +171,33 @@ export function useAiAssistant() {
     }
   }, [push]);
 
+
+
+
+  // 2 faq function 
+
+
   const askFaq = useCallback(async (query: string, topicId?: string) => {
     const trimmed = query.trim();
     if (!trimmed && !topicId) return;
 
     setFlow('faq');
-    push({ id: nextId(), role: 'user', content: trimmed });
+    push({ id: nextId(), role: 'user', content: trimmed || topicId || '' });
     const signal = startRequest();
 
     try {
-      const data = await chatFaq(topicId ? { topicId } : { query: trimmed }, signal);
+      const data = await chatFaq({ question: trimmed || topicId }, signal);
       if (signal.aborted) return;
+      const cleanedAnswer = (data.answer || '')
+        .replace(/\s*\[[^\]]*?(?:\.pdf|\.docx|\.txt|\bpage\s*\d+)[^\]]*?\]/gi, '')
+        .replace(/\s+([.,;:!?])/g, '$1');
+
       push({
         id: nextId(),
         role: 'assistant',
         kind: 'faq_answer',
-        content: data.answer,
+        content: cleanedAnswer,
+        sources: data.sources,
       });
     } catch (err) {
       if (signal.aborted) return;
@@ -193,6 +208,9 @@ export function useAiAssistant() {
       if (!signal.aborted) setIsLoading(false);
     }
   }, [push]);
+
+
+  //3 raise ticket
 
   const submitIssue = useCallback(async (rawDescription: string) => {
     const trimmed = rawDescription.trim();

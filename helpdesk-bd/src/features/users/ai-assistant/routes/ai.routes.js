@@ -14,8 +14,9 @@ router.get("/my-recent-tickets", aiController.getMyRecentTicketNames);
 // 2. Query ticket status by ticket name (subject)
 router.get("/ticket-status-by-name", aiController.getTicketStatusByName);
 
-// 3. FAQ troubleshooting & chat
+// 3. FAQ troubleshooting & chat (routed to Python FastAPI RAG Service)
 router.post("/faq-chat", aiController.chatFaq);
+router.post("/message", aiController.chatFaq);
 
 // 4. Classify raw customer issue into structured draft
 router.post("/classify-issue", aiController.classifyIssue);

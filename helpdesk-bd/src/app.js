@@ -36,6 +36,7 @@ app.use("/api/agent", meetingLinkRoutes);
 app.use("/api/public", publicScheduleRoutes);
 app.use("/api/agent", calendarRoutes);
 app.use("/api/ai-assistant", aiAssistantRoutes);
+app.use("/api/chatbot", aiAssistantRoutes);
 
 
 app.get("/", (req, res) => {

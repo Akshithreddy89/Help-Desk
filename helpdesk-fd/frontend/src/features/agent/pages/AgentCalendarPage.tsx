@@ -12,9 +12,8 @@ import dayjs, { Dayjs } from 'dayjs';
 
 import AgentLayout from '../components/AgentLayout';
 import BookingDetailsPanel from '../components/BookingDetailsPanel';
-import { fetchCalendarBookings } from '../services/calendar.service';
+import { useAgentCalendarBookings } from '../hooks/useAgentCalendar';
 import type { CalendarBookingResponse } from '../services/calendar.service';
-import { useToast } from '../../../context/ToastContext';
 import LoadingOverlay from '../../../components/loader/LoadingOverlay';
 import './AgentCalendar.css';
 
@@ -39,16 +38,37 @@ const AgentCalendarPage: React.FC = () => {
   const theme = useTheme();
   const primaryColor = theme.palette.primary.main;
 
-  const { showToast } = useToast();
   const [selectedBooking, setSelectedBooking] = useState<MeetingBooking | null>(null);
   const [currentDate, setCurrentDate] = useState<Dayjs>(dayjs());
   const [calendarTitle, setCalendarTitle] = useState<string>('');
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
-  const [bookings, setBookings] = useState<MeetingBooking[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [dateRange, setDateRange] = useState<{ startDate?: string; endDate?: string }>({});
   const calendarRef = useRef<any>(null);
 
   const popoverOpen = Boolean(anchorEl);
+
+  // React Query hook for calendar bookings with automatic view range caching
+  const { data: rawBookings = [], isLoading } = useAgentCalendarBookings(
+    dateRange.startDate,
+    dateRange.endDate
+  );
+
+  // Map fetched bookings to MeetingBooking model
+  const bookings: MeetingBooking[] = useMemo(() => {
+    return rawBookings.map((b: CalendarBookingResponse) => ({
+      id: b.id,
+      agentId: b.agent_id,
+      customerName: b.customer_name,
+      customerEmail: b.customer_email,
+      customerPhone: b.customer_phone,
+      bookingDate: b.meeting_date,
+      startTime: b.start_time.substring(0, 5),
+      endTime: b.end_time.substring(0, 5),
+      meetingType: 'Virtual',
+      status: b.status.toLowerCase() as any,
+      bookingRef: b.booking_reference,
+    }));
+  }, [rawBookings]);
 
   // Ensure FullCalendar resizes correctly when the side panel opens or closes
   useEffect(() => {
@@ -136,7 +156,7 @@ const AgentCalendarPage: React.FC = () => {
     );
   };
 
-  const handleDatesSet = async (arg: any) => {
+  const handleDatesSet = (arg: any) => {
     setCalendarTitle(arg.view.title);
     const start = dayjs(arg.start);
     const end = dayjs(arg.end);
@@ -144,33 +164,11 @@ const AgentCalendarPage: React.FC = () => {
        setCurrentDate(dayjs(arg.view.currentStart));
     }
     
-    // Fetch bookings for the current view
-    const startDateStr = start.format('YYYY-MM-DD');
-    const endDateStr = end.format('YYYY-MM-DD');
-    
-    setIsLoading(true);
-    try {
-      const data = await fetchCalendarBookings(startDateStr, endDateStr);
-      const mappedBookings: MeetingBooking[] = data.map((b: CalendarBookingResponse) => ({
-        id: b.id,
-        agentId: b.agent_id,
-        customerName: b.customer_name,
-        customerEmail: b.customer_email,
-        customerPhone: b.customer_phone,
-        bookingDate: b.meeting_date,
-        startTime: b.start_time.substring(0, 5),
-        endTime: b.end_time.substring(0, 5),
-        meetingType: 'Virtual', // Default type
-        status: b.status.toLowerCase() as any,
-        bookingRef: b.booking_reference,
-      }));
-      setBookings(mappedBookings);
-    } catch (err: any) {
-      console.error('Failed to fetch bookings', err);
-      showToast('Failed to load calendar events. Please try again.', 'error');
-    } finally {
-      setIsLoading(false);
-    }
+    // Set query dates range to trigger React Query fetch/cache
+    setDateRange({
+      startDate: start.format('YYYY-MM-DD'),
+      endDate: end.format('YYYY-MM-DD'),
+    });
   };
 
   const calendarApi = () => calendarRef.current?.getApi();

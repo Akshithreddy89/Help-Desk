@@ -43,28 +43,36 @@ const TypingDots = () => (
   </Box>
 );
 
+const stripCitations = (text: string) =>
+  text
+    .replace(/\s*\[[^\]]*?(?:\.pdf|\.docx|\.txt|\bpage\s*\d+)[^\]]*?\]/gi, '')
+    .replace(/\s+([.,;:!?])/g, '$1');
+
 /* ── Markdown-ish FAQ body ── */
-const FaqBody: React.FC<{ text: string }> = ({ text }) => (
-  <Box>
-    {text.split('\n').map((line, index) => (
-      <Typography
-        key={index}
-        variant="body2"
-        sx={{ whiteSpace: 'pre-wrap', mb: 0.4, lineHeight: 1.65, color: '#334155', fontSize: '0.83rem' }}
-      >
-        {line.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
-          part.startsWith('**') && part.endsWith('**') ? (
-            <Box component="strong" key={i} sx={{ color: '#0f172a', fontWeight: 700 }}>
-              {part.slice(2, -2)}
-            </Box>
-          ) : (
-            part
-          ),
-        )}
-      </Typography>
-    ))}
-  </Box>
-);
+const FaqBody: React.FC<{ text: string }> = ({ text }) => {
+  const cleanedText = stripCitations(text || '');
+  return (
+    <Box>
+      {cleanedText.split('\n').map((line, index) => (
+        <Typography
+          key={index}
+          variant="body2"
+          sx={{ whiteSpace: 'pre-wrap', mb: 0.4, lineHeight: 1.65, color: '#334155', fontSize: '0.83rem' }}
+        >
+          {line.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+            part.startsWith('**') && part.endsWith('**') ? (
+              <Box component="strong" key={i} sx={{ color: '#0f172a', fontWeight: 700 }}>
+                {part.slice(2, -2)}
+              </Box>
+            ) : (
+              part
+            ),
+          )}
+        </Typography>
+      ))}
+    </Box>
+  );
+};
 
 /* ── Assistant bubble wrapper ── */
 const AiBubble: React.FC<{ children: React.ReactNode }> = ({ children }) => (

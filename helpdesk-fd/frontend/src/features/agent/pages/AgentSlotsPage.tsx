@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Box, Typography, Paper, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -11,13 +11,14 @@ import SlotCard from '../components/slots/SlotCard';
 import PublicMeetingLink from '../components/slots/PublicMeetingLink';
 import { useToast } from '../../../context/ToastContext';
 import { 
-  createAvailability, 
-  getAvailabilities, 
-  getMeetingLink, 
-  createMeetingLink, 
-  type AgentAvailabilityPayload,
-  type AgentAvailabilityResponse,
-  type MeetingLinkResponse
+  useAgentAvailabilities, 
+  useAgentMeetingLink, 
+  useCreateAvailability, 
+  useCreateMeetingLink 
+} from '../hooks/useAgentScheduling';
+import type { 
+  AgentAvailabilityPayload,
+  AgentAvailabilityResponse
 } from '../services/availability.service';
 
 const AgentSlotsPage: React.FC = () => {
@@ -28,76 +29,54 @@ const AgentSlotsPage: React.FC = () => {
   const [duration, setDuration] = useState<number>(30);
   const [dateRange, setDateRange] = useState<'today' | 'week' | 'month'>('week');
   const [selectedMonth, setSelectedMonth] = useState<Dayjs>(dayjs());
-  
-  const [groupedAvailabilities, setGroupedAvailabilities] = useState<Record<string, AgentAvailabilityResponse[]>>({});
-  const [meetingLink, setMeetingLink] = useState<MeetingLinkResponse | null>(null);
-  
-  const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  useEffect(() => {
-    fetchData();
+  // Compute start/end dates based on range selection
+  const { startDateStr, endDateStr } = useMemo(() => {
+    let start = '';
+    let end = '';
+    if (dateRange === 'today') {
+      start = dayjs().format('YYYY-MM-DD');
+      end = start;
+    } else if (dateRange === 'week') {
+      start = dayjs().startOf('week').format('YYYY-MM-DD');
+      end = dayjs().endOf('week').format('YYYY-MM-DD');
+    } else if (dateRange === 'month') {
+      start = selectedMonth.startOf('month').format('YYYY-MM-DD');
+      end = selectedMonth.endOf('month').format('YYYY-MM-DD');
+    }
+    return { startDateStr: start, endDateStr: end };
   }, [dateRange, selectedMonth]);
 
-  const fetchData = async () => {
-    setIsLoading(true);
-    try {
-      // 1. Fetch meeting link, if not exists, DO NOT create it yet.
-      // Optimize: Only fetch if we haven't already.
-      if (!meetingLink) {
-        const link = await getMeetingLink();
-        setMeetingLink(link);
+  // React Query hooks
+  const { data: meetingLink } = useAgentMeetingLink();
+  const { data: availData = [], isLoading } = useAgentAvailabilities(startDateStr, endDateStr);
+  const createAvailabilityMutation = useCreateAvailability();
+  const createMeetingLinkMutation = useCreateMeetingLink();
+
+  // Group availabilities by date with memoization
+  const groupedAvailabilities = useMemo(() => {
+    const grouped: Record<string, AgentAvailabilityResponse[]> = {};
+    availData.forEach(a => {
+      if (!grouped[a.availability_date]) {
+        grouped[a.availability_date] = [];
       }
+      grouped[a.availability_date].push(a);
+    });
 
-      // 2. Fetch availabilities based on dateRange
-      let startDateStr = '';
-      let endDateStr = '';
-      
-      if (dateRange === 'today') {
-        startDateStr = dayjs().format('YYYY-MM-DD');
-        endDateStr = startDateStr;
-      } else if (dateRange === 'week') {
-        startDateStr = dayjs().startOf('week').format('YYYY-MM-DD');
-        endDateStr = dayjs().endOf('week').format('YYYY-MM-DD');
-      } else if (dateRange === 'month') {
-        startDateStr = selectedMonth.startOf('month').format('YYYY-MM-DD');
-        endDateStr = selectedMonth.endOf('month').format('YYYY-MM-DD');
+    let sortedKeys = Object.keys(grouped).sort();
+    if (dateRange === 'month') {
+      const selectedStr = selectedMonth.format('YYYY-MM-DD');
+      if (sortedKeys.includes(selectedStr)) {
+        sortedKeys = [selectedStr, ...sortedKeys.filter(k => k !== selectedStr)];
       }
-
-      const availData = await getAvailabilities(startDateStr, endDateStr);
-      
-      // Group by date (2 block ranges on same day)
-      const grouped: Record<string, AgentAvailabilityResponse[]> = {};
-      availData.forEach(a => {
-        if (!grouped[a.availability_date]) {
-          grouped[a.availability_date] = [];
-        }
-        grouped[a.availability_date].push(a);
-      });
-      
-      // Sort keys (dates) sorting the dates accendingly by the date
-      let sortedKeys = Object.keys(grouped).sort();
-      
-      // If dateRange is 'month', sort the exact selectedMonth date to the top
-      if (dateRange === 'month') {
-        const selectedStr = selectedMonth.format('YYYY-MM-DD');
-        if (sortedKeys.includes(selectedStr)) {
-          sortedKeys = [selectedStr, ...sortedKeys.filter(k => k !== selectedStr)];
-        }
-      }
-
-      const sortedGrouped: Record<string, AgentAvailabilityResponse[]> = {};
-      sortedKeys.forEach(key => {
-        sortedGrouped[key] = grouped[key];
-      });
-      setGroupedAvailabilities(sortedGrouped);
-
-    } catch (err: any) {
-      console.error('Error fetching data', err);
-      showToast('Failed to load slots and availabilities.', 'error');
-    } finally {
-      setIsLoading(false);
     }
-  };
+
+    const sortedGrouped: Record<string, AgentAvailabilityResponse[]> = {};
+    sortedKeys.forEach(key => {
+      sortedGrouped[key] = grouped[key];
+    });
+    return sortedGrouped;
+  }, [availData, dateRange, selectedMonth]);
 
   const handleGenerateSlots = async () => {
     if (selectedDates.length === 0) {
@@ -125,13 +104,12 @@ const AgentSlotsPage: React.FC = () => {
       slot_duration_minutes: duration
     };
 
-    setIsLoading(true);
     try {
-      await createAvailability(payload);
+      await createAvailabilityMutation.mutateAsync(payload);
       
       // If a meeting link does not exist yet, create one now.
       if (!meetingLink) {
-        await createMeetingLink();
+        await createMeetingLinkMutation.mutateAsync();
       }
 
       showToast("Availability created and slots generated successfully!", 'success');
@@ -140,9 +118,6 @@ const AgentSlotsPage: React.FC = () => {
       setStartTime(null);
       setEndTime(null);
       setDuration(30);
-      
-      // Refresh data
-      await fetchData();
     } catch (err: any) {
       console.error('Error creating availability', err);
       if (err.response?.status === 409) {
@@ -153,8 +128,6 @@ const AgentSlotsPage: React.FC = () => {
       } else {
         showToast(err.response?.data?.message || 'Failed to create availability.', 'error');
       }
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -164,6 +137,8 @@ const AgentSlotsPage: React.FC = () => {
       showToast("Link copied to clipboard!", 'success');
     }
   };
+
+  const isFormSubmitting = createAvailabilityMutation.isPending || createMeetingLinkMutation.isPending;
 
   return (
     <AgentLayout>
@@ -189,7 +164,7 @@ const AgentSlotsPage: React.FC = () => {
             duration={duration}
             setDuration={setDuration}
             onGenerate={handleGenerateSlots}
-            isLoading={isLoading}
+            isLoading={isFormSubmitting}
           />
 
           {/* Common Public Meeting Link */}

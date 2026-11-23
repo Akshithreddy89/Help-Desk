@@ -3,72 +3,50 @@ import { Box, Typography, Button, TextField, CircularProgress, Alert, Paper, Inp
 import { Add as AddIcon, Search as SearchIcon, Close as CloseIcon } from '@mui/icons-material';
 import CustomerLayout from '../components/CustomerLayout';
 import RaiseTicketDialog from '../components/RaiseTicketDialog';
-import axiosInstance from '../../../utils/axios';
 import { useNavigate } from 'react-router-dom';
 import StatusChip from '../../../components/StatusChip';
 import PriorityChip from '../../../components/PriorityChip';
 import { formatDate } from '../../../utils/ticketHelpers';
 import FilterSelect from '../../../components/FilterSelect';
 import { STATUS_FILTER_OPTIONS } from '../../../utils/constants';
-
-interface Ticket {
-  id: string;
-  ticket_number: string;
-  subject: string;
-  priority: string;
-  status: string;
-  created_at: string;
-}
+import { useCustomerTickets } from '../hooks/useCustomerTickets';
 
 const MyTickets: React.FC = () => {
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [totalPages, setTotalPages] = useState(1);
   
   const [isRaiseTicketOpen, setIsRaiseTicketOpen] = useState(false);
   const navigate = useNavigate();
 
-  const fetchTickets = async () => {
-    setLoading(true);
-    try {
-      const response = await axiosInstance.get('/tickets', {
-        params: {
-          search: search || undefined,
-          status: statusFilter !== 'All' ? statusFilter : undefined,
-          page,
-          size: pageSize
-        }
-      });
-      
-      if (Array.isArray(response.data.data)) {
-        setTickets(response.data.data);
-      } else {
-        setTickets(response.data.data.tickets || []);
-        setTotalPages(response.data.data.totalPages || 1);
-      }
-      setError(null);
-    } catch (err: any) {
-      console.error("Failed to fetch tickets", err);
-      setError('Failed to load tickets. Please try again later.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Debounce search input by 400ms to avoid unnecessary network queries
   useEffect(() => {
-    // Adding a debounce for search
-    const delayDebounceFn = setTimeout(() => {
-      fetchTickets();
-    }, 500);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 400);
 
-    return () => clearTimeout(delayDebounceFn);
-  }, [search, statusFilter, page, pageSize]);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // React Query hook for tickets list with automatic caching and smooth pagination
+  const {
+    data,
+    isLoading,
+    isPlaceholderData,
+    error,
+  } = useCustomerTickets({
+    search: debouncedSearch,
+    status: statusFilter,
+    page,
+    size: pageSize,
+  });
+
+  const tickets = data?.tickets || [];
+  const totalPages = data?.totalPages || 1;
+  const errorMessage = error instanceof Error ? error.message : error ? 'Failed to load tickets.' : null;
 
   const handleStatusChange = (value: string) => {
     setStatusFilter(value);
@@ -130,15 +108,24 @@ const MyTickets: React.FC = () => {
           </Box>
         </Box>
 
-        {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+        {errorMessage && <Alert severity="error" sx={{ mb: 3 }}>{errorMessage}</Alert>}
 
         {/* Ticket List */}
-        {loading ? (
+        {isLoading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}>
             <CircularProgress />
           </Box>
         ) : (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', flex: 1, pr: 1 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: 2, 
+            overflowY: 'auto', 
+            flex: 1, 
+            pr: 1,
+            opacity: isPlaceholderData ? 0.65 : 1,
+            transition: 'opacity 0.2s ease',
+          }}>
             {tickets.length === 0 ? (
               <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3, border: '1px solid #eee', boxShadow: 'none' }}>
                 <Typography color="text.secondary">No tickets found.</Typography>
@@ -174,7 +161,7 @@ const MyTickets: React.FC = () => {
           </Box>
         )}
 
-        {!loading && (totalPages > 1 || tickets.length > 0) && (
+        {!isLoading && (totalPages > 1 || tickets.length > 0) && (
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 3, mb: 2, flexShrink: 0, px: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography variant="body2" color="text.secondary">Rows per page:</Typography>
@@ -218,10 +205,7 @@ const MyTickets: React.FC = () => {
       {/* Raise Ticket Dialog */}
       <RaiseTicketDialog 
         open={isRaiseTicketOpen} 
-        onClose={() => setIsRaiseTicketOpen(false)}
-        onSuccess={() => {
-          fetchTickets();
-        }}
+        onClose={() => setIsRaiseTicketOpen(false)} 
       />
     </CustomerLayout>
   );

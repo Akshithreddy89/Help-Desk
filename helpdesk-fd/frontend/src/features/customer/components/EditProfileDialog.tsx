@@ -3,12 +3,13 @@ import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, B
 import { Close as CloseIcon } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
-import axiosInstance from '../../../utils/axios';
+import { useUpdateCustomerProfile } from '../hooks/useCustomerProfile';
+import { useToast } from '../../../context/ToastContext';
 
 interface EditProfileDialogProps {
   open: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess?: () => void;
   initialData: {
     first_name: string;
     last_name: string;
@@ -26,6 +27,8 @@ const validationSchema = yup.object({
 
 const EditProfileDialog: React.FC<EditProfileDialogProps> = ({ open, onClose, onSuccess, initialData }) => {
   const [error, setError] = useState<string | null>(null);
+  const { showToast } = useToast();
+  const updateProfileMutation = useUpdateCustomerProfile();
 
   const formik = useFormik({
     initialValues: initialData,
@@ -34,11 +37,10 @@ const EditProfileDialog: React.FC<EditProfileDialogProps> = ({ open, onClose, on
     onSubmit: async (values, { setSubmitting }) => {
       setError(null);
       try {
-        const response = await axiosInstance.put('/customer/profile', values);
-        if (response.data.success) {
-          onSuccess();
-          onClose();
-        }
+        await updateProfileMutation.mutateAsync(values);
+        showToast('Profile updated successfully!');
+        onSuccess?.();
+        onClose();
       } catch (err: any) {
         setError(err.response?.data?.message || 'Failed to update profile');
       } finally {
@@ -132,10 +134,10 @@ const EditProfileDialog: React.FC<EditProfileDialogProps> = ({ open, onClose, on
           <Button
             type="submit"
             variant="contained"
-            disabled={formik.isSubmitting}
+            disabled={formik.isSubmitting || updateProfileMutation.isPending}
             sx={{ fontWeight: 'bold', textTransform: 'none', borderRadius: 2 }}
           >
-            {formik.isSubmitting ? 'Saving...' : 'Save Changes'}
+            {updateProfileMutation.isPending ? 'Saving...' : 'Save Changes'}
           </Button>
         </DialogActions>
       </form>
