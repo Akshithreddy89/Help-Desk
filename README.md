@@ -107,8 +107,8 @@ Use these seeded accounts to log in directly:
 | Role | Email | Password |
 |---|---|---|
 | **Admin** | `admin1@helpdesk.com` | `12345` |
-| **Agent** | `agent1@helpdesk.com` | `12345` |
-| **Customer** | `customer1@helpdesk.com` | `12345` |
+| **Agent** | `macha.akshith@gmail.com` | `sai@12345` |
+| **Customer** | `uday@gmail.com` | `uday@12345` |
 
 ---
 
